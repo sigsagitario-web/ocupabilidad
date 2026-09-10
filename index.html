@@ -211,7 +211,6 @@
 
 
 <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
-<script>window.msalBrowser=window.msal;</script>
 <script>
 // AUTO-GENERADO — respaldo local (la app usa SharePoint/Graph cuando hay sesión)
 const SITES=[{id:"KM52",lab:"Camp. KM 52",sub:"Interno"},{id:"KM37",lab:"Camp. KM 37",sub:"Interno"},{id:"CAJAMARCA",lab:"Cajamarca",sub:"Externo / Planilla"}];
@@ -257,11 +256,17 @@ let F=nuevoRegistro(), PANTALLA=0, REGISTROS=[], FILTRO_SUP='todos', VISTA_SUP='
 
 // ============ MSAL ============
 function initMsal(){
-  msal = new msalBrowser.PublicClientApplication({
+  const lib = window.msal; // la librería MSAL se expone en window.msal
+  if(!lib || !lib.PublicClientApplication){
+    console.error('MSAL no se cargó (revisa la conexión o el bloqueo de scripts).');
+    return false;
+  }
+  msal = new lib.PublicClientApplication({
     auth:{ clientId:CONFIG.clientId, authority:`https://login.microsoftonline.com/${CONFIG.tenantId}`,
            redirectUri: location.origin+location.pathname },
     cache:{ cacheLocation:"localStorage", storeAuthStateInCookie:false } // recuerda sesión en el navegador
   });
+  return true;
 }
 async function loginMS(){
   try{
@@ -438,14 +443,27 @@ function getColor(p){if(p<0.4)return '#4a9fd4';if(p<0.75)return '#2fbf71';if(p<=
 // =========================================================
 //  ARRANQUE
 // =========================================================
+async function esperarMsal(intentos){
+  // espera hasta que la librería MSAL del CDN esté disponible (máx ~5s)
+  for(let i=0;i<(intentos||50);i++){
+    if(window.msal && window.msal.PublicClientApplication) return true;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
 async function iniciar(){
   if(MODO_DEMO){
     // demo sin login: datos locales, elige perfil manual
     DATA.rutas=RUTAS; DATA.conductores=CONDUCTORES_DB; ORIGEN='local';
     render(); return;
   }
-  initMsal();
-  render();               // muestra pantalla de login
+  render();               // muestra pantalla de login mientras carga MSAL
+  const cargó = await esperarMsal();
+  if(!cargó){
+    toast('No se pudo cargar el inicio de sesión de Microsoft. Revisa tu conexión y recarga.','err');
+    return;
+  }
+  if(!initMsal()) return;
   const ok=await trySilentLogin();  // intenta reanudar sesión recordada
   if(!ok) render();
 }
