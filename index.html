@@ -210,7 +210,7 @@
 </div>
 
 
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js"></script>
 <script>
 // AUTO-GENERADO — respaldo local (la app usa SharePoint/Graph cuando hay sesión)
 const SITES=[{id:"KM52",lab:"Camp. KM 52",sub:"Interno"},{id:"KM37",lab:"Camp. KM 37",sub:"Interno"},{id:"CAJAMARCA",lab:"Cajamarca",sub:"Externo / Planilla"}];
@@ -255,31 +255,43 @@ let ORIGEN='local';
 let F=nuevoRegistro(), PANTALLA=0, REGISTROS=[], FILTRO_SUP='todos', VISTA_SUP='validar';
 
 // ============ MSAL ============
-function initMsal(){
+let _msalReady=false;
+async function initMsal(){
   const lib = window.msal; // la librería MSAL se expone en window.msal
   if(!lib || !lib.PublicClientApplication){
     console.error('MSAL no se cargó (revisa la conexión o el bloqueo de scripts).');
     return false;
   }
-  msal = new lib.PublicClientApplication({
-    auth:{ clientId:CONFIG.clientId, authority:`https://login.microsoftonline.com/${CONFIG.tenantId}`,
-           redirectUri: location.origin+location.pathname },
-    cache:{ cacheLocation:"localStorage", storeAuthStateInCookie:false } // recuerda sesión en el navegador
-  });
-  return true;
+  try{
+    msal = new lib.PublicClientApplication({
+      auth:{ clientId:CONFIG.clientId, authority:`https://login.microsoftonline.com/${CONFIG.tenantId}`,
+             redirectUri: location.origin+location.pathname },
+      cache:{ cacheLocation:"localStorage", storeAuthStateInCookie:false } // recuerda sesión en el navegador
+    });
+    await msal.initialize();   // MSAL v3 requiere initialize() una vez
+    _msalReady=true;
+    return true;
+  }catch(e){ console.error('Error inicializando MSAL:',e); return false; }
+}
+// Garantiza que MSAL esté listo antes de cualquier operación
+async function asegurarMsal(){
+  if(_msalReady && msal) return true;
+  const cargó = await esperarMsal();
+  if(!cargó){ toast('No se pudo cargar el inicio de sesión de Microsoft. Revisa tu conexión y recarga.','err'); return false; }
+  return await initMsal();
 }
 async function loginMS(){
+  if(!await asegurarMsal()) return;
   try{
-    await msal.initialize();
     const resp=await msal.loginPopup({scopes:GRAPH_SCOPES});
     CUENTA=resp.account;
     await trasLogin();
-  }catch(e){ toast('No se pudo iniciar sesión','err'); console.error(e); }
+  }catch(e){ toast('No se pudo iniciar sesión: '+(e&&e.errorCode?e.errorCode:e.message||''),'err'); console.error(e); }
 }
 async function trySilentLogin(){
   if(MODO_DEMO) return false;
+  if(!await asegurarMsal()) return false;
   try{
-    await msal.initialize();
     const cuentas=msal.getAllAccounts();
     if(!cuentas.length) return false;
     CUENTA=cuentas[0];
@@ -457,13 +469,8 @@ async function iniciar(){
     DATA.rutas=RUTAS; DATA.conductores=CONDUCTORES_DB; ORIGEN='local';
     render(); return;
   }
-  render();               // muestra pantalla de login mientras carga MSAL
-  const cargó = await esperarMsal();
-  if(!cargó){
-    toast('No se pudo cargar el inicio de sesión de Microsoft. Revisa tu conexión y recarga.','err');
-    return;
-  }
-  if(!initMsal()) return;
+  render();                 // muestra pantalla de login mientras carga MSAL
+  await asegurarMsal();     // inicializa MSAL (muestra aviso si no carga)
   const ok=await trySilentLogin();  // intenta reanudar sesión recordada
   if(!ok) render();
 }
