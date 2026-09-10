@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ocupabilidad · Transportes Sagitario</title>
+<style>
+  :root{
+    --bg:#0f1922; --panel:#16242f; --panel2:#1d3140; --line:#2a4254;
+    --ink:#eef4f7; --muted:#8fa8b8; --dim:#5f7788;
+    --amber:#f2a900; --amber-d:#c98a00;
+    --green:#2fbf71; --green-d:#1d9d58;
+    --red:#e5484d; --blue:#4a9fd4; --violet:#8b7fd4;
+    --r:14px; --tap:56px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:16px;line-height:1.4;padding-bottom:120px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px}
+
+  header{position:sticky;top:0;z-index:50;
+    background:linear-gradient(180deg,#0f1922 72%,rgba(15,25,34,0));padding:14px 14px 10px}
+  .brandrow{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto}
+  .mark{width:38px;height:38px;border-radius:9px;flex:0 0 auto;background:var(--amber);color:#111;
+    display:grid;place-items:center;font-weight:800;font-size:19px;letter-spacing:-1px;box-shadow:0 2px 0 var(--amber-d)}
+  .brandtxt h1{font-size:15px;margin:0;font-weight:700}
+  .brandtxt p{font-size:11px;margin:1px 0 0;color:var(--muted);text-transform:uppercase;letter-spacing:1.4px}
+  .modepill{margin-left:auto;font-size:11px;font-weight:800;padding:6px 11px;border-radius:20px;
+    text-transform:uppercase;letter-spacing:.6px}
+  .modepill.cond{background:rgba(47,191,113,.16);color:var(--green);border:1px solid rgba(47,191,113,.35)}
+  .modepill.sup{background:rgba(139,127,212,.16);color:var(--violet);border:1px solid rgba(139,127,212,.4)}
+
+  .steps{display:flex;gap:6px;margin:12px auto 0;max-width:560px}
+  .step{flex:1;height:4px;border-radius:2px;background:var(--line);transition:.3s}
+  .step.done{background:var(--amber)} .step.cur{background:var(--green)}
+
+  section.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 15px;margin:14px 0}
+  .card-h{display:flex;align-items:baseline;gap:9px;margin:0 0 14px}
+  .card-n{font-size:11px;font-weight:800;color:#0f1922;background:var(--amber);width:22px;height:22px;
+    border-radius:6px;display:grid;place-items:center;flex:0 0 auto;transform:translateY(-1px)}
+  .card-h h2{font-size:15px;margin:0;font-weight:700}
+  .card-h .sub{font-size:12px;color:var(--muted);margin-left:auto;font-weight:600}
+
+  label.fld{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:0 0 7px}
+  label.fld .req{color:var(--amber)}
+  .hint{font-size:12px;color:var(--dim);margin:6px 0 0;line-height:1.35}
+
+  select.big{width:100%;height:var(--tap);background:var(--panel2);color:var(--ink);border:1.5px solid var(--line);
+    border-radius:11px;font-size:16px;font-weight:600;padding:0 42px 0 15px;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%238fa8b8' stroke-width='2.4' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 13px center}
+  select.big:focus{outline:none;border-color:var(--amber);background-color:#213747}
+  select.big:disabled{opacity:.4} select.big.filled{border-color:var(--green)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{min-height:var(--tap);flex:1 1 calc(50% - 4px);background:var(--panel2);border:1.5px solid var(--line);
+    border-radius:11px;color:var(--ink);font-size:15px;font-weight:700;padding:8px 10px;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:.12s}
+  .chip small{font-size:11px;font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0}
+  .chip:active{transform:scale(.97)}
+  .chip.on{background:var(--amber);border-color:var(--amber);color:#111}
+  .chip.on small{color:#5a4300}
+  .chip.wide{flex:1 1 100%}
+  .chip.dir.on{background:var(--blue);border-color:var(--blue);color:#fff} .chip.dir.on small{color:#d5ecf8}
+  .chip.turno.on{background:var(--violet);border-color:var(--violet);color:#fff} .chip.turno.on small{color:#e3dffa}
+
+  /* paraderos: fila embarque/desembarque */
+  .par{background:var(--panel2);border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;margin:10px 0}
+  .par.filled{border-color:var(--green)}
+  .par-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .par-ord{width:22px;height:22px;flex:0 0 auto;border-radius:6px;background:var(--line);color:var(--ink);
+    font-size:11px;font-weight:800;display:grid;place-items:center}
+  .par-name{font-size:13.5px;font-weight:700;line-height:1.2}
+  .par-rows{display:flex;gap:8px}
+  .par-cell{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 8px}
+  .par-cell .pl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px;text-align:center}
+  .par-cell.emb .pl{color:var(--green)} .par-cell.des .pl{color:var(--blue)}
+  .stepline{display:flex;align-items:center;gap:6px}
+  .sbtn{width:38px;height:40px;flex:0 0 auto;border-radius:8px;border:none;font-size:22px;font-weight:600;
+    display:grid;place-items:center;cursor:pointer;line-height:1;user-select:none;background:var(--line);color:var(--ink)}
+  .sbtn:active{transform:scale(.9)}
+  .sbtn.plus{background:var(--amber);color:#111}
+  .sin{flex:1;min-width:0;width:100%;height:40px;text-align:center;background:transparent;border:none;
+    color:var(--ink);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+  .sin:focus{outline:none}
+
+  .gauge{background:linear-gradient(180deg,#12202b,#0e1a23);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-top:12px}
+  .gauge-top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:9px}
+  .gauge-lab{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+  .gauge-val{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .gauge-val small{font-size:13px;color:var(--muted);font-weight:600}
+  .bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden;position:relative}
+  .bar-fill{height:100%;border-radius:6px;transition:width .35s cubic-bezier(.4,0,.2,1),background .35s;width:0}
+  .bar-100{position:absolute;top:-3px;bottom:-3px;left:100%;width:2px;background:var(--muted);opacity:.5}
+  .gtags{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap}
+  .gtag{font-size:12px;color:var(--muted)} .gtag b{color:var(--ink);font-weight:700}
+
+  .review{font-size:14px}
+  .rrow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .rrow:last-child{border:none}
+  .rk{color:var(--muted);font-weight:600} .rv{font-weight:700;text-align:right}
+
+  .actionbar{position:fixed;left:0;right:0;bottom:0;z-index:60;
+    background:linear-gradient(0deg,#0f1922 78%,rgba(15,25,34,0));padding:12px 14px calc(14px + env(safe-area-inset-bottom))}
+  .actionbar .wrap{display:flex;gap:10px}
+  .btn{flex:1;height:var(--tap);border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.3px}
+  .btn:active{transform:scale(.98)}
+  .btn-primary{background:var(--green);color:#04160c;box-shadow:0 3px 0 var(--green-d)}
+  .btn-primary:disabled{background:var(--line);color:var(--dim);box-shadow:none}
+  .btn-ghost{flex:0 0 auto;width:var(--tap);background:var(--panel2);color:var(--ink);border:1.5px solid var(--line)}
+  .btn-amber{background:var(--amber);color:#111;box-shadow:0 3px 0 var(--amber-d)}
+  .btn-violet{background:var(--violet);color:#fff}
+
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:var(--green);
+    color:#04160c;font-weight:800;font-size:15px;padding:13px 22px;border-radius:12px;z-index:80;opacity:0;
+    pointer-events:none;transition:.28s;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:90%;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--red);color:#fff}
+
+  .savedbar{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:11px 14px;margin:14px 0}
+  .savedbar .cnt{font-size:22px;font-weight:800;color:var(--green)}
+  .savedbar .lbl{font-size:12px;color:var(--muted);line-height:1.3} .savedbar .lbl b{color:var(--ink)}
+  .linkbtn{margin-left:auto;background:none;border:1px solid var(--line);color:var(--amber);font-size:13px;
+    font-weight:700;padding:9px 13px;border-radius:9px;cursor:pointer}
+
+  .hidden{display:none!important}
+  .fadein{animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* login perfil */
+  .gate{max-width:400px;margin:8vh auto 0;padding:0 20px;text-align:center}
+  .gate .mark{width:64px;height:64px;font-size:30px;border-radius:16px;margin:0 auto 18px}
+  .gate h2{font-size:22px;margin:0 0 6px}
+  .gate p{color:var(--muted);font-size:14px;margin:0 0 28px}
+  .rolebtns{display:flex;flex-direction:column;gap:12px}
+  .rolebtn{height:64px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);
+    font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:14px;padding:0 20px;text-align:left}
+  .rolebtn:active{transform:scale(.98)}
+  .rolebtn .ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:20px;flex:0 0 auto}
+  .rolebtn.cond .ic{background:rgba(47,191,113,.16);color:var(--green)}
+  .rolebtn.sup .ic{background:rgba(139,127,212,.16);color:var(--violet)}
+  .rolebtn small{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px}
+  .pinbox{display:flex;gap:8px;justify-content:center;margin:22px 0}
+  .pindig{width:52px;height:60px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel2);
+    color:var(--ink);font-size:26px;font-weight:800;text-align:center}
+  .pindig:focus{outline:none;border-color:var(--violet)}
+
+  /* supervisor: tarjetas de registro */
+  .filtro{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch}
+  .fbtn{flex:0 0 auto;padding:9px 15px;border-radius:20px;border:1.5px solid var(--line);background:var(--panel2);
+    color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .fbtn.on{background:var(--violet);border-color:var(--violet);color:#fff}
+  .regc{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin:11px 0}
+  .regc.aprob{border-color:rgba(47,191,113,.4)}
+  .regc-h{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .regc-cod{font-size:15px;font-weight:800}
+  .regc-oc{margin-left:auto;font-size:16px;font-weight:800}
+  .badge{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:12px;text-transform:uppercase;letter-spacing:.5px}
+  .badge.pend{background:rgba(242,169,0,.16);color:var(--amber)}
+  .badge.aprob{background:rgba(47,191,113,.16);color:var(--green)}
+  .regc-m{font-size:13px;color:var(--muted);line-height:1.5}
+  .regc-m b{color:var(--ink);font-weight:700}
+  .regc-acts{display:flex;gap:8px;margin-top:11px}
+  .regc-acts button{flex:1;height:44px;border-radius:10px;border:none;font-size:14px;font-weight:800;cursor:pointer}
+  .ba{background:var(--green);color:#04160c} .be{background:var(--panel2);color:var(--ink);border:1.5px solid var(--line)!important}
+
+  .kpis{display:flex;gap:10px;margin:14px 0}
+  .kpi{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 12px;text-align:center}
+  .kpi .n{font-size:26px;font-weight:800;line-height:1} .kpi .l{font-size:11px;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+  .kpi.g .n{color:var(--green)} .kpi.a .n{color:var(--amber)} .kpi.b .n{color:var(--blue)}
+
+  .modal{position:fixed;inset:0;z-index:90;background:rgba(6,12,17,.72);display:none;align-items:flex-end}
+  .modal.show{display:flex}
+  .sheet{background:var(--panel);width:100%;max-width:560px;margin:0 auto;border-radius:18px 18px 0 0;
+    max-height:86vh;display:flex;flex-direction:column;border:1px solid var(--line);border-bottom:none}
+  .sheet-h{padding:16px 16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+  .sheet-h h3{margin:0;font-size:16px;flex:1}
+  .sheet-body{overflow-y:auto;padding:12px 14px 24px}
+  .xbtn{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:20px;cursor:pointer}
+  .empty{text-align:center;color:var(--dim);padding:34px 10px;font-size:14px}
+
+  .srcnote{font-size:11px;color:var(--dim);text-align:center;padding:8px 0 0}
+  .srcnote b{color:var(--muted)}
+</style>
+</head>
+<body>
+<header id="hdr" class="hidden">
+  <div class="brandrow">
+    <div class="mark">TS</div>
+    <div class="brandtxt"><h1>Registro de Ocupabilidad</h1><p>Transportes Sagitario</p></div>
+    <span class="modepill" id="modepill"></span>
+  </div>
+  <div class="steps" id="steps"></div>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<div class="actionbar hidden" id="abar"><div class="wrap" id="actions"></div></div>
+<div class="toast" id="toast"></div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <div class="sheet-h"><h3 id="modalTitle">Detalle</h3><button class="xbtn" onclick="cerrarModal()">✕</button></div>
+    <div class="sheet-body" id="modalBody"></div>
+  </div>
+</div>
+
+
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script>window.msalBrowser=window.msal;</script>
+<script>
+// AUTO-GENERADO — respaldo local (la app usa SharePoint/Graph cuando hay sesión)
+const SITES=[{id:"KM52",lab:"Camp. KM 52",sub:"Interno"},{id:"KM37",lab:"Camp. KM 37",sub:"Interno"},{id:"CAJAMARCA",lab:"Cajamarca",sub:"Externo / Planilla"}];
+const RUTAS=[{"codigo": "101", "site": "CAJAMARCA", "placa": "DAA-086", "unidad": "Ómnibus", "cap": 45, "ruta": "Baños del Inca - La Quinua Complex", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "CHANCHAMAYO", "CRUCE DEL HIGO", "EX TERMINAL TERRESTRE", "HOYOS RUBIO", "HYUNDAI", "IE ANDRES AVELINO CACERES", "LA QUINUA COMPLEX", "MERCADO SAN MARTIN", "OFICINA EUCALIPTOS", "OVALO MUSICAL", "PARQUE FONAVI II", "PENSAMIENTOS"]}, {"codigo": "103", "site": "CAJAMARCA", "placa": "BYK-364", "unidad": "", "cap": 46, "ruta": "Cajamarca - complex - km37", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "CHANCHAMAYO", "DERCO", "LA QUINUA COMPLEX", "PENSAMIENTOS", "REAL PLAZA"]}, {"codigo": "104", "site": "CAJAMARCA", "placa": "BYL-535", "unidad": "Ómnibus", "cap": 46, "ruta": "Planta de Carbón - Aglomeración - La Quinua Complex", "turno": "DIA", "paraderos": ["AGLOMERACION LA QUINUA", "CAJAMARCA", "DERCO", "HOYOS RUBIO", "HUANDOY", "HYUNDAI", "LABORATORIO ANALITICO - PLANTA AWTP", "MERCADO SAN MARTIN", "OVALO MUSICAL", "PARQUE FONAVI II", "PLANTA DE CARBON", "URBANIZACION LOS DOCENTES"]}, {"codigo": "105", "site": "CAJAMARCA", "placa": "CUA-552", "unidad": "Ómnibus", "cap": 45, "ruta": "Eucaliptos - Mina (Cambio de Guardia Operaciones / Mantenimiento / Procesos)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "CAMPAMENTO KM 52", "CHANCHAMAYO", "HYUNDAI", "OFICINA EUCALIPTOS", "TALLERES YANACOCHA NORTE"]}, {"codigo": "110", "site": "CAJAMARCA", "placa": "T8P-035", "unidad": "Ómnibus", "cap": 46, "ruta": "Eucaliptos - La Quinua Complex - Camp. Km37", "turno": "DIA", "paraderos": ["HYUNDAI", "LA QUINUA COMPLEX", "OFICINA EUCALIPTOS", "URBANIZACION LOS DOCENTES"]}, {"codigo": "112", "site": "CAJAMARCA", "placa": "CZY-441", "unidad": "Ómnibus", "cap": 45, "ruta": "Baños del Inca - Talleres Yanacocha Norte - Camp. Km52", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CRUCE DEL HIGO", "HOYOS RUBIO", "HYUNDAI", "IE ANDRES AVELINO CACERES", "PORONGO", "TALLERES YANACOCHA NORTE"]}, {"codigo": "203", "site": "CAJAMARCA", "placa": "BVO-291", "unidad": "Minibus", "cap": 25, "ruta": "Baños del Inca - Mina (Cambio de Guardia Operaciones / Mantenimiento / Procesos)", "turno": "DIA", "paraderos": ["BAÑOS DEL INCA", "CAMPAMENTO KM 37", "CHANCHAMAYO", "HYUNDAI", "IE ANDRES AVELINO CACERES"]}, {"codigo": "204", "site": "CAJAMARCA", "placa": "T7Z-321", "unidad": "Minibus", "cap": 25, "ruta": "Shuttle Independencia", "turno": "DIA", "paraderos": ["BCP SUCRE", "CAMPAMENTO KM 52", "GRIFO MI AMIGO", "HOYOS RUBIO", "HYUNDAI", "INDEPENDENCIA", "JUAN XXIII", "LQ OESTE (PLATAFORMA 1)", "MTC", "PLAZUELA VICTOR RAUL", "TERMINAL ANITA TOURS"]}, {"codigo": "210", "site": "CAJAMARCA", "placa": "CAH-528", "unidad": "Minibus", "cap": 29, "ruta": "Independencia - Mina (Cambio de Guardia Operaciones / Mantenimiento / Procesos)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CHANCHAMAYO", "ESTRUCTURA 37", "INDEPENDENCIA", "TALLERES YANACOCHA NORTE"]}, {"codigo": "213", "site": "CAJAMARCA", "placa": "T7Z-407", "unidad": "Minibus", "cap": 25, "ruta": "Independencia - Laboratorio - La Quinua Complex - Camp. Km37", "turno": "DIA", "paraderos": ["CELIS", "GRIFO MI AMIGO", "HYUNDAI", "IE ANDRES AVELINO CACERES", "JUAN XXIII", "LA QUINUA COMPLEX", "MTC"]}, {"codigo": "107", "site": "KM37", "placa": "BXU-340", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km37 - Talleres Yanacocha Norte", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "CAMPAMENTO KM 52", "TALLERES YANACOCHA NORTE", "WTP OESTE (PLATAFORMA 2)"]}, {"codigo": "108", "site": "KM37", "placa": "T7Z-523", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km37 - Cambio de Guardia 1400", "turno": "DIA", "paraderos": ["CAMBIO DE GUARDIA RETO 1400", "CAMPAMENTO KM 37"]}, {"codigo": "206", "site": "KM37", "placa": "BWG-013", "unidad": "Minibus", "cap": 25, "ruta": "Camp. Km37 - Cambio de Guardia Tijeras", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "TIJERAS"]}, {"codigo": "208", "site": "KM37", "placa": "T7S-078", "unidad": "Minibus", "cap": 45, "ruta": "Camp. Km37 - Planta Yanacocha Norte", "turno": "DIA", "paraderos": ["CAJAMARCA", "CAMPAMENTO KM 37", "PLANTA YANACOCHA NORTE"]}, {"codigo": "209", "site": "KM37", "placa": "CYZ-287", "unidad": "", "cap": 25, "ruta": "Camp. Km37 - Huascar", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "HUASCAR", "TALLERES YANACOCHA NORTE"]}, {"codigo": "211", "site": "KM37", "placa": "CAD-599", "unidad": "Minibus", "cap": 25, "ruta": "Camp. Km37 - Laboratorio Análitico - Planta AWTP", "turno": "DIA", "paraderos": ["CAJAMARCA", "CAMPAMENTO KM 37", "LA QUINUA COMPLEX", "LABORATORIO ANALITICO - PLANTA AWTP", "PLANTA AWTP"]}, {"codigo": "401", "site": "KM37", "placa": "T7Z-362", "unidad": "Minibus", "cap": 25, "ruta": "Camp. Km37 - LQC -Talleres - Km52", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "CAMPAMENTO KM 52", "LA QUINUA COMPLEX", "OFICINAS GOLD MILL"]}, {"codigo": "404", "site": "KM37", "placa": "CAF-525", "unidad": "", "cap": 25, "ruta": "Camp. Km52 - La Quinua Complex - Oficinas Gold Mill - WTP Oeste - WTP Este - Camp. Km37", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "CAMPAMENTO KM 52", "LA QUINUA COMPLEX", "OFICINAS GOLD MILL", "WTP OESTE"]}, {"codigo": "701", "site": "KM37", "placa": "T7V-156", "unidad": "Microbus", "cap": 14, "ruta": "Aeropuerto - Camp. Km37 - Oficinas Gold Mill - Camp. Km52", "turno": "DIA", "paraderos": ["AEROPUERTO", "CAMPAMENTO KM 37", "DOLAR CITY", "HOTEL KUNTURWASI", "LA QUINUA COMPLEX", "OFICINAS GOLD MILL"]}, {"codigo": "705", "site": "KM37", "placa": "T5U-406", "unidad": "Microbus", "cap": 16, "ruta": "Camp. Km37 - LQ WTP Oeste (Plataforma 1, 3, 4 Y 5) Lift 12, 14- Backfill)", "turno": "DIA", "paraderos": ["BACKFILL", "CAMPAMENTO KM 37", "CARPAS COMEDOR", "WTP OESTE (PLATAFORMA 0)", "WTP OESTE (PLATAFORMA 1)", "WTP OESTE (PLATAFORMA 5)"]}, {"codigo": "707", "site": "KM37", "placa": "T7V-535", "unidad": "", "cap": 16, "ruta": "Camp. Km37 - Gold Mill", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 37", "CAMPAMENTO KM 52", "CARPAS COMEDOR", "OFICINAS GOLD MILL", "WTP OESTE (PLATAFORMA 1)", "WTP OESTE (PLATAFORMA 2)"]}, {"codigo": "207", "site": "KM52", "placa": "T7Z-274", "unidad": "Minibus", "cap": 25, "ruta": "Camp. Km52 - Planta Pampa Larga", "turno": "DIA", "paraderos": ["CAJAMARCA", "CAMPAMENTO KM 37", "CAMPAMENTO KM 52", "PLANTA PAMPA LARGA"]}, {"codigo": "303", "site": "KM52", "placa": "T7Z-571", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - LQ Quinua WTP Oeste (Plataforma 2- Tanques)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP OESTE (PLATAFORMA 2)", "WTP OESTE LQ PLATAFORMA 2 TANQUES"]}, {"codigo": "304", "site": "KM52", "placa": "T8A-146", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - La Quinua WTP (Plataforma 3)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "LQ OESTE (PLATAFORMA 3)"]}, {"codigo": "305", "site": "KM52", "placa": "T6C-158", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "306", "site": "KM52", "placa": "T6G-164", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "307", "site": "KM52", "placa": "BYI-299", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["AEROPUERTO", "CAMPAMENTO KM 52", "NUEVO TERMINAL TERRESTRE", "WTP ESTE (PLATAFORMA 2)", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "308", "site": "KM52", "placa": "T6C-169", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "309", "site": "KM52", "placa": "T6C-205", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "310", "site": "KM52", "placa": "T6G-225", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "311", "site": "KM52", "placa": "T6C-210", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "NUEVO TERMINAL TERRESTRE", "TERMINAL SAGITARIO", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "312", "site": "KM52", "placa": "BYI-491", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 0)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP OESTE (PLATAFORMA 0)", "WTP OESTE (PLATAFORMA 2)"]}, {"codigo": "313", "site": "KM52", "placa": "T7X-161", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "turno": "NOCHE", "paraderos": ["CAMPAMENTO KM 52", "WTP ESTE (PLATAFORMA 1 Y 2)", "WTP OESTE (PLATAFORMA 1)", "WTP OESTE (PLATAFORMA 2)"]}, {"codigo": "314", "site": "KM52", "placa": "T7X-216", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "315", "site": "KM52", "placa": "T7Z-526", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "turno": "NOCHE", "paraderos": ["CAMPAMENTO KM 52", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "316", "site": "KM52", "placa": "T7Z-540", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - plataforma 1 y 2 - Este - Noche", "turno": "NOCHE", "paraderos": ["CAMPAMENTO KM 52", "WTP ESTE (PLATAFORMA 1 Y 2)", "WTP ESTE (PLATAFORMA 1)"]}, {"codigo": "317", "site": "KM52", "placa": "T6C-156", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "318", "site": "KM52", "placa": "T6C-244", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "319", "site": "KM52", "placa": "T7W-241", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - La Quinua WTP (Plataforma 3)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "LQ OESTE (PLATAFORMA 3)"]}, {"codigo": "320", "site": "KM52", "placa": "CCJ-684", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - La Quinua WTP Oeste ( Plataforma 4)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "LQ OESTE (PLATAFORMA 4)", "WTP OESTE (PLATAFORMA 2)"]}, {"codigo": "321", "site": "KM52", "placa": "CDT-683", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - WTP Oeste - Almacén Complex", "turno": "DIA", "paraderos": ["ALMACEN COMPLEX", "CAMPAMENTO KM 52", "CARPAS COMEDOR"]}, {"codigo": "322", "site": "KM52", "placa": "T6C-211", "unidad": "Ómnibus", "cap": 46, "ruta": "Camp. Km52 - WTP Oeste - Oficinas Gold Mill", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "OFICINAS GOLD MILL"]}, {"codigo": "323", "site": "KM52", "placa": "BYL-161", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "324", "site": "KM52", "placa": "T6C-237", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "329", "site": "KM52", "placa": "CTZ-484", "unidad": "", "cap": 42, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "DOLAR CITY", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "337", "site": "KM52", "placa": "CTZ-083", "unidad": "", "cap": 45, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP ESTE (PLATAFORMA 1)", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "339", "site": "KM52", "placa": "BXT-318", "unidad": "", "cap": 46, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "346", "site": "KM52", "placa": "CVX-144", "unidad": "", "cap": 49, "ruta": "Camp. Km52 - Plataforma 0 - Lift 12", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "LIFT 12", "PLATAFORMA C", "WTP OESTE (PLATAFORMA 2)"]}, {"codigo": "359", "site": "KM52", "placa": "BZJ-301", "unidad": "", "cap": 45, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "turno": "NOCHE", "paraderos": ["CAMPAMENTO KM 52", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "382", "site": "KM52", "placa": "CTZ-469", "unidad": "", "cap": 45, "ruta": "Camp. Km52 - Plataforma 2 ESTE - ALMACEN KM45", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "WTP ESTE (LAY DOWN 1A)"]}, {"codigo": "385", "site": "KM52", "placa": "CTZ-152", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["CAJAMARCA", "CAMPAMENTO KM 52", "TERMINAL SAGITARIO", "WTP OESTE (PLATAFORMA 1)"]}, {"codigo": "386", "site": "KM52", "placa": "CTZ-421", "unidad": "Ómnibus", "cap": 45, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "turno": "NOCHE", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "390", "site": "KM52", "placa": "CVI-221", "unidad": "", "cap": 45, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "NOCHE", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "391", "site": "KM52", "placa": "CVU-432", "unidad": "", "cap": 45, "ruta": "Camp. Km37 - WTP Oeste (Plataforma 1y2)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "392", "site": "KM52", "placa": "T7W-328", "unidad": "", "cap": 45, "ruta": "Camp. Km52 - plataforma 1A- Laydown", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "WTP ESTE (LAY DOWN 2A)"]}, {"codigo": "394", "site": "KM52", "placa": "CTZ-452", "unidad": "", "cap": 45, "ruta": "Camp. Km52 - Nuevo terminal", "turno": "DIA", "paraderos": ["Camp. Km52", "Nuevo terminal"]}, {"codigo": "395", "site": "KM52", "placa": "CTZ-265", "unidad": "", "cap": 45, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "turno": "NOCHE", "paraderos": ["CAMPAMENTO KM 52", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "397", "site": "KM52", "placa": "CTZ-319", "unidad": "", "cap": 45, "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP ESTE (PLATAFORMA 1 Y 2)", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "403", "site": "KM52", "placa": "CCJ-366", "unidad": "Minibus", "cap": 29, "ruta": "KM52- Plataforma 5", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP ESTE", "WTP OESTE", "WTP OESTE (PLATAFORMA 2)", "WTP OESTE (PLATAFORMA 5)"]}, {"codigo": "419", "site": "KM52", "placa": "T7S-096", "unidad": "", "cap": 25, "ruta": "Camp. Km52 - plataforma 3 Oeste", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "LQ OESTE (PLATAFORMA 3)", "VEO8", "WTP OESTE (PLATAFORMA 1)", "WTP OESTE (PLATAFORMA 2)"]}, {"codigo": "421", "site": "KM52", "placa": "CST-454", "unidad": "", "cap": 25, "ruta": "Camp. Km52 - Plataforma 1 y 3 - Oeste", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP OESTE (PLATAFORMA 1 Y 2)", "WTP OESTE (PLATAFORMA 1 Y 3)"]}, {"codigo": "706", "site": "KM52", "placa": "T7V-163", "unidad": "", "cap": 16, "ruta": "Soporte: Camp. Km52- WTP Oeste backfill", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "708", "site": "KM52", "placa": "T8E-175", "unidad": "Microbus", "cap": 14, "ruta": "Camp. Km52 - Evo6 - Lift17 (Poza Violeta)", "turno": "DIA", "paraderos": ["CAMPAMENTO KM 52", "CARPAS COMEDOR", "WTP ESTE", "WTP OESTE (PLATAFORMA 1 Y 2)"]}, {"codigo": "709", "site": "KM52", "placa": "T8E-206", "unidad": "Microbus", "cap": 14, "ruta": "Soporte - Visitas: Camp. Km52 - WTP Oeste", "turno": "DIA", "paraderos": ["AEROPUERTO", "CAJAMARCA", "CAMPAMENTO KM 37", "CAMPAMENTO KM 52", "DOLAR CITY", "OFICINAS GOLD MILL"]}];
+const CONDUCTORES_DB=[{"nombre": "AGUILAR DIAZ SEGUNDO LEONCIO", "email": "segundo.aguilar@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "ALARCON LOPEZ JOSE LUIS", "email": "jose.alarcon@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "ALFARO GIL LUIS MIGUEL", "email": "luis.alfaro@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "ALTAMIRANO JULCAMORO MIGUEL ANGEL", "email": "miguel.altamirano@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "ALVAREZ OCAS SEGUNDO VICTOR", "email": "segundo.alvarez@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "AQUINO CRISOLOGO JASLY MANUEL", "email": "jasly.aquino@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "ARIZA TERAN JOSE EDUARDO", "email": "jose.ariza@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "BECERRA HERRERA ANGEL RONALDO", "email": "angel.becerra@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "BUENO OCAS EDWIN WILDER", "email": "edwin.bueno@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "BURGA ORTIZ SANTOS", "email": "santos.burga@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CADENAS SULLON JUAN CARLOS", "email": "juan.cadenas@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CALUA VALDIVIA JULIO", "email": "julio.calua@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CARRASCO CHAVEZ JORGE", "email": "jorge.carrasco@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CASTILLO REQUEJO EDE", "email": "ede.castillo@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CERNA MINCHAN ALAN GUSTAVO", "email": "alan.cerna@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHALAN TASILLA ANTONIO", "email": "antonio.chalan@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHALAN TASILLA GILBERTO", "email": "gilberto.chalan@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHAVEZ LIMAY SEGUNDO LORENZO", "email": "segundo.chavez@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHAVEZ MEDINA JOSE VICTOR", "email": "jose.chavez@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHAVEZ ZAMBRANO JHON ROSMEL", "email": "jhon.chavez@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHILON CASTREJON RAFAEL", "email": "rafael.chilon@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHILON HUATAY CARLOS ALEX", "email": "carlos.chilon@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHILON INFANTE ALFONSO", "email": "alfonso.chilon@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHILON INFANTE MARCIAL", "email": "marcial.chilon@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHUQUILIN TERAN URIAS", "email": "urias.chuquilin@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHUQUIMANGO PAISIG ALADINO", "email": "aladino.chuquimango@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CHUQUIMANGO PAISIG ELMER", "email": "elmer.chuquimango@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "COLORADO CABRERA CARLOS", "email": "carlos.colorado@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "CULQUI GALVEZ JUAN", "email": "juan.culqui@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "DAVALOS BRICEÑO ERWIN JOSE", "email": "erwin.davalos@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "DILAS CARUAJULCA DANIEL JAIRO", "email": "daniel.dilas@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "ESPINOZA MAMANI HELMER ANTONIO", "email": "helmer.espinoza@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "GALLARDO CHINGAY LUIS ALBERTO", "email": "luis.gallardo@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "GARCIA LIMAY SEGUNDO ALBERTO", "email": "segundo.garcia@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "HERRERA TAFUR ALBERTO", "email": "alberto.herrera@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "HUARIPATA RODRIGUEZ HUBER ALBERTO", "email": "huber.huaripata@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "INFANTE CASTREJON NOEL VICTOR", "email": "noel.infante@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "INFANTE QUISPE LUCAS FERNANDO", "email": "lucas.infante@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "INTOR OCON JULIO CESAR", "email": "julio.intor@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "ISPILCO CHILON ALEX ELEAZAR", "email": "alex.ispilco@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "JUAREZ RAMIREZ SANTOS APOSTOL", "email": "santos.juarez@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "LEIVA CERDAN WILSON ROGER", "email": "wilson.leiva@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "LEIVA ORRILLO RICARDO", "email": "ricardo.leiva@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "LINGAN VASQUEZ JOSE LORENZO", "email": "jose.lingan@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "LLANOS CHAUPE HECTOR", "email": "hector.llanos@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "LLANOS CUZCO ALEJANDRO", "email": "alejandro.llanos@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MALCA BECERRA REGULO", "email": "regulo.malca@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MALCA TORRES RAUL", "email": "raul.malca@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MALCA VILCA CARLOS EDER", "email": "carlos.malca@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MARIN HUATAY MARTIN", "email": "martin.marin@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MARIN TIRADO JORGE OSWALDO", "email": "jorge.marin@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MENDOZA JULON JORGE", "email": "jorge.mendoza@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MENDOZA TAICA CLAUDIO", "email": "claudio.mendoza@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MESTANZA MOSQUEIRA CANDELARIO", "email": "candelario.mestanza@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MINCHAN CARMONA JUAN", "email": "juan.minchan@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MORENO BENSUNCE ANANIAS", "email": "ananias.moreno@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MORENO TELLO EDUARDO", "email": "eduardo.moreno@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MOROCHO MENDOZA ELADIO", "email": "eladio.morocho@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MUDARRA LOPEZ CESAR", "email": "cesar.mudarra@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "MUÑOZ HERRERA JUAN MIGUEL", "email": "juan.munoz@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "NOVOA CAMPOS VICTOR JAIMITO", "email": "victor.novoa@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "OCAS LLAMOGA JOSE ASUNCION", "email": "jose.ocas@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "OLORTEGUI MALAVER LUIS ALBERTO", "email": "luis.olortegui@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "PINEDO CORREA ELMER ROGER", "email": "elmer.pinedo@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "PISCO HUACCHA ESTEBAN", "email": "esteban.pisco@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "PORTAL GARAY CELESTINO", "email": "celestino.portal@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "QUISPE GONZALES RONALD RENE", "email": "ronald.quispe@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "QUISPE SALCEDO SANTOS ANGEL", "email": "santos.quispe@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "RAMOS MOSQUEIRA JAVIER", "email": "javier.ramos@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "REQUELME OCAS JOSE MARCELINO", "email": "jose.requelme@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "REYES SANCHEZ JOSE RICARDO", "email": "jose.reyes@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "RODAS REVILLA WILMAN EVELIO", "email": "wilman.rodas@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "RUDAS BAUTISTA ELADIO", "email": "eladio.rudas@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "RUDAS RODRIGUEZ JULIO", "email": "julio.rudas@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "RUITON HERRERA ELMER", "email": "elmer.ruiton@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "RUPACHO LIMAY ANTOLIN", "email": "antolin.rupacho@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "SALAZAR YZQUIERDO JORGE ORLANDO", "email": "jorge.salazar@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "SALCEDO CHAVEZ JAIME CARLOS", "email": "jaime.salcedo@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "SANCHEZ ZAMORA JESUS", "email": "jesus.sanchez@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "SAUCEDO CASANOVA RONALD", "email": "ronald.saucedo@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "TANTALEAN CARRASCO JOSE MANUEL", "email": "jose.tantalean@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "TASILLA CULQUI JAVIER", "email": "javier.tasilla@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "TASILLA HERRERA AUSBERTO", "email": "ausberto.tacilla@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "TERAN BECERRA VICENTE NOLVER", "email": "vicente.teran@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "TINGAL CARRASCO EDILBERTO", "email": "edilberto.tingal@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "VARGAS TEATINO WILDER", "email": "wilder.vargas@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "VASQUEZ TARRILLO NAPOLEON", "email": "napoleon.vasquez@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "VERA PABLO JOSE CONSTANTE", "email": "jose.vera@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "VILCA BARBOZA JONATHAN ALEXANDER", "email": "jonathan.vilca@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "VILLANUEVA PRADO JAIME", "email": "jaime.villanueva@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "VILLAR MENDO SEGUNDO CRUZ", "email": "segundo.villar@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "YACUPAICO ZAFRA CARLOS ALBERTO", "email": "carlos.yacupaico@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "YONG PEREZ JANSON AUGUSTO", "email": "janson.yong@transportessagitariosrl050.onmicrosoft.com"}, {"nombre": "ZAMORA PORTAL WILDER", "email": "wilder.zamora@transportessagitariosrl050.onmicrosoft.com"}];
+const PROG_DEMO={"fecha": "2026-09-09", "items": [{"codigo": "101", "placa": "DAA-086", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Baños del Inca - La Quinua Complex", "conductor": "LIMAY LLANOS LORENZO", "turno": "DIA"}, {"codigo": "103", "placa": "BYK-364", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Cajamarca - complex - km37", "conductor": "CHALAN TASILLA GILBERTO", "turno": "DIA"}, {"codigo": "104", "placa": "BYL-535", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Planta de Carbón - Aglomeración - La Quinua Complex", "conductor": "TASILLA CULQUI JAVIER", "turno": "DIA"}, {"codigo": "105", "placa": "CUA-552", "estado": "NO PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Eucaliptos - Mina (Cambio de Guardia Operaciones / Mantenimiento / Procesos)", "conductor": "BUENO OCAS EDWIN WILDER", "turno": "DIA"}, {"codigo": "107", "placa": "BXU-340", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Talleres Yanacocha Norte", "conductor": "VILCA BARBOZA JONATHAN ALEXANDER", "turno": "DIA"}, {"codigo": "108", "placa": "T7Z-523", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Cambio de Guardia 1400", "conductor": "SALAZAR YZQUIERDO JORGE ORLANDO", "turno": "DIA"}, {"codigo": "110", "placa": "T8P-035", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Eucaliptos - La Quinua Complex - Camp. Km37", "conductor": "CHUQUIMANGO PAISIG JAVIER", "turno": "DIA"}, {"codigo": "112", "placa": "CZY-441", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Baños del Inca - Talleres Yanacocha Norte - Camp. Km52", "conductor": "RAYCO CUSQUISIBAN JOSE ANANIAS", "turno": "DIA"}, {"codigo": "203", "placa": "BVO-291", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Baños del Inca - Mina (Cambio de Guardia Operaciones / Mantenimiento / Procesos)", "conductor": "CULQUI GALVEZ JUAN", "turno": "DIA"}, {"codigo": "204", "placa": "T7Z-362", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Shuttle Independencia", "conductor": "APAZA UTURUNCO CARLOS PRIMITIVO", "turno": "DIA"}, {"codigo": "206", "placa": "BWG-013", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Cambio de Guardia Tijeras", "conductor": "VILLANUEVA PRADO JAIME", "turno": "DIA"}, {"codigo": "207", "placa": "T7Z-274", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Planta Pampa Larga", "conductor": "ZAVALETA CHAVEZ LUIS HUMBERTO", "turno": "DIA"}, {"codigo": "208", "placa": "T7S-078", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Planta Yanacocha Norte", "conductor": "ZAMORA PORTAL WILDER", "turno": "DIA"}, {"codigo": "209", "placa": "CYZ-287", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Huascar", "conductor": "CHAVEZ ZAMBRANO JHON ROSMEL", "turno": "DIA"}, {"codigo": "210", "placa": "CAH-528", "estado": "NO PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Independencia - Mina (Cambio de Guardia Operaciones / Mantenimiento / Procesos)", "conductor": "RUITON HERRERA ELMER", "turno": "DIA"}, {"codigo": "211", "placa": "CAD-599", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Laboratorio Análitico - Planta AWTP", "conductor": "SANCHEZ ZAMORA JESUS", "turno": "DIA"}, {"codigo": "213", "placa": "T7Z-407", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "Independencia - Laboratorio - La Quinua Complex - Camp. Km37", "conductor": "CHAVEZ CASTREJON HECTOR", "turno": "DIA"}, {"codigo": "303", "placa": "CTZ-622", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - LQ Quinua WTP Oeste (Plataforma 2- Tanques)", "conductor": "DAVALOS BRICEÑO ERWIN JOSE", "turno": "DIA"}, {"codigo": "304", "placa": "T8A-146", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - La Quinua WTP (Plataforma 3)", "conductor": "GALLARDO CHINGAY LUIS ALBERTO", "turno": "DIA"}, {"codigo": "305", "placa": "T6C-158", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "LLANOS CUZCO ALEJANDRO", "turno": "DIA"}, {"codigo": "306", "placa": "T6G-164", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "COLORADO CABRERA CARLOS", "turno": "DIA"}, {"codigo": "307", "placa": "BYI-299", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "VERA PABLO JOSE CONSTANTE", "turno": "DIA"}, {"codigo": "308", "placa": "BYK-363", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "MALCA VILCA CARLOS EDER", "turno": "DIA"}, {"codigo": "309", "placa": "T6C-205", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "CHILON INFANTE ALFONSO", "turno": "DIA"}, {"codigo": "310", "placa": "T6G-225", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "OCAS LLAMOGA JOSE ASUNCION", "turno": "DIA"}, {"codigo": "311", "placa": "T6C-210", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "HUARIPATA RODRIGUEZ HUBER ALBERTO", "turno": "DIA"}, {"codigo": "312", "placa": "BYI-491", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 0)", "conductor": "MALCA BECERRA REGULO", "turno": "DIA"}, {"codigo": "313", "placa": "T7X-161", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "conductor": "GARCIA LIMAY SEGUNDO ALBERTO", "turno": "NOCHE"}, {"codigo": "314", "placa": "T7X-216", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2)", "conductor": "CHUQUIMANGO PAISIG ELMER", "turno": "DIA"}, {"codigo": "315", "placa": "T7Z-526", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "conductor": "SALCEDO CHAVEZ JAIME CARLOS", "turno": "NOCHE"}, {"codigo": "316", "placa": "T7Z-571", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - plataforma 1 y 2 - Este - Noche", "conductor": "ESPINOZA MAMANI HELMER ANTONIO", "turno": "NOCHE"}, {"codigo": "317", "placa": "T6C-156", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "CHUQUIMANGO PAISIG ALADINO", "turno": "DIA"}, {"codigo": "318", "placa": "T6C-244", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "OLORTEGUI MALAVER LUIS ALBERTO", "turno": "DIA"}, {"codigo": "319", "placa": "T7W-241", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - La Quinua WTP (Plataforma 3)", "conductor": "LINGAN VASQUEZ JOSE LORENZO", "turno": "DIA"}, {"codigo": "320", "placa": "CCJ-684", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - La Quinua WTP Oeste ( Plataforma 4)", "conductor": "INFANTE CASTREJON NOEL VICTOR", "turno": "DIA"}, {"codigo": "321", "placa": "T7Z-540", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste - Almacén Complex", "conductor": "TERAN BECERRA VICENTE NOLVER", "turno": "DIA"}, {"codigo": "322", "placa": "T6C-211", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste - Oficinas Gold Mill", "conductor": "INTOR OCON JULIO CESAR", "turno": "DIA"}, {"codigo": "323", "placa": "BYL-161", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "MARIN TIRADO JORGE OSWALDO", "turno": "DIA"}, {"codigo": "324", "placa": "T6C-237", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "MALCA TORRES RAUL", "turno": "DIA"}, {"codigo": "329", "placa": "CTZ-484", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2)", "conductor": "CHILON INFANTE MARCIAL", "turno": "DIA"}, {"codigo": "337", "placa": "CTZ-083", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2)", "conductor": "CHAVEZ LIMAY SEGUNDO LORENZO", "turno": "DIA"}, {"codigo": "339", "placa": "BXT-318", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "CHILON INFANTE ALFONSO", "turno": "DIA"}, {"codigo": "346", "placa": "CVX-144", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Plataforma 0 - Lift 12", "conductor": "VILLAR MENDO SEGUNDO CRUZ", "turno": "DIA"}, {"codigo": "359", "placa": "BZJ-301", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "conductor": "CALUA VALDIVIA JULIO", "turno": "NOCHE"}, {"codigo": "382", "placa": "CTZ-452", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Plataforma 2 ESTE - ALMACEN KM45", "conductor": "MARIN HUATAY MARTIN", "turno": "DIA"}, {"codigo": "385", "placa": "CTZ-152", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "RUDAS BAUTISTA ELADIO", "turno": "DIA"}, {"codigo": "386", "placa": "CTZ-421", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "conductor": "INFANTE QUISPE LUCAS FERNANDO", "turno": "NOCHE"}, {"codigo": "390", "placa": "CVI-221", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "MORENO TELLO EDUARDO", "turno": "DIA"}, {"codigo": "391", "placa": "CVU-432", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km37 - WTP Oeste (Plataforma 1y2)", "conductor": "VASQUEZ GUEVARA CESAR ALFREDO", "turno": "DIA"}, {"codigo": "392", "placa": "T7W-328", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - plataforma 1A- Laydown", "conductor": "GRACIANO OCAS ALEJANDRO", "turno": "DIA"}, {"codigo": "394", "placa": "CTZ-469", "estado": "NO PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Nuevo terminal", "conductor": "TASILLA HERRERA AUSBERTO", "turno": "DIA"}, {"codigo": "395", "placa": "CTZ-265", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2) - NOCHE", "conductor": "TANTALEAN CARRASCO JOSE MANUEL", "turno": "NOCHE"}, {"codigo": "397", "placa": "CTZ-319", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - WTP Oeste (Plataforma 1y2)", "conductor": "ALARCON LOPEZ JOSE LUIS", "turno": "DIA"}, {"codigo": "401", "placa": "T7Z-321", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - LQC -Talleres - Km52", "conductor": "LEIVA CERDAN WILSON ROGER", "turno": "DIA"}, {"codigo": "403", "placa": "CCJ-366", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "KM52- Plataforma 5", "conductor": "VARGAS TEATINO WILDER", "turno": "DIA"}, {"codigo": "404", "placa": "CAF-525", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km52 - La Quinua Complex - Oficinas Gold Mill - WTP Oeste - WTP Este - Camp. Km37", "conductor": "CARRASCO CHAVEZ JORGE", "turno": "DIA"}, {"codigo": "419", "placa": "T7S-096", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - plataforma 3 Oeste", "conductor": "CHAVEZ MEDINA JOSE VICTOR", "turno": "DIA"}, {"codigo": "421", "placa": "CST-454", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Plataforma 1 y 3 - Oeste", "conductor": "VASQUEZ TARRILLO NAPOLEON", "turno": "DIA"}, {"codigo": "701", "placa": "T7V-156", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Aeropuerto - Camp. Km37 - Oficinas Gold Mill - Camp. Km52", "conductor": "TINGAL CARRASCO EDILBERTO", "turno": "DIA"}, {"codigo": "705", "placa": "T5U-406", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - LQ WTP Oeste (Plataforma 1, 3, 4 Y 5) Lift 12, 14- Backfill)", "conductor": "YONG PEREZ JANSON AUGUSTO", "turno": "DIA"}, {"codigo": "706", "placa": "T7V-163", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Soporte: Camp. Km52- WTP Oeste backfill", "conductor": "PINEDO CORREA ELMER ROGER", "turno": "DIA"}, {"codigo": "707", "placa": "T7V-535", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Gold Mill", "conductor": "RUPACHO LIMAY ANTOLIN", "turno": "DIA"}, {"codigo": "708", "placa": "T8E-175", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Evo6 - Lift17 (Poza Violeta)", "conductor": "MESTANZA MOSQUEIRA CANDELARIO", "turno": "DIA"}, {"codigo": "709", "placa": "T8E-206", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Soporte - Visitas: Camp. Km52 - WTP Oeste", "conductor": "QUISPE GONZALES RONALD RENE", "turno": "DIA"}, {"codigo": "-", "placa": "-", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "SIN SERVICIO", "conductor": "LEIVA ORRILLO RICARDO", "turno": "DIA"}, {"codigo": "-", "placa": "-", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "SIN SERVICIO", "conductor": "MALAVER IZQUIERDO WILMER", "turno": "DIA"}, {"codigo": "-", "placa": "-", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "SIN SERVICIO", "conductor": "ALTAMIRANO JULCAMORO MIGUEL ANGEL", "turno": "DIA"}, {"codigo": "-", "placa": "-", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "SIN SERVICIO", "conductor": "SAUCEDO CASANOVA RONALD", "turno": "DIA"}, {"codigo": "-", "placa": "-", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "SIN SERVICIO", "conductor": "WILMER VERASTEGUI ARRIBASPLATA", "turno": "DIA"}, {"codigo": "107", "placa": "BXU-340", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Talleres Yanacocha Norte", "conductor": "VILCA BARBOZA JONATHAN ALEXANDER", "turno": "NOCHE"}, {"codigo": "108", "placa": "T7Z-523", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Cambio de Guardia 1400", "conductor": "SALAZAR YZQUIERDO JORGE ORLANDO", "turno": "NOCHE"}, {"codigo": "204", "placa": "T7Z-362", "estado": "PROGRAMADO", "campamento": "CAJAMARCA", "ruta": "SERVICIO ANITA", "conductor": "APAZA UTURUNCO CARLOS PRIMITIVO", "turno": "DIA"}, {"codigo": "206", "placa": "BWG-013", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Cambio de Guardia Tijeras", "conductor": "VILLANUEVA PRADO JAIME", "turno": "NOCHE"}, {"codigo": "207", "placa": "T7Z-274", "estado": "PROGRAMADO", "campamento": "KM 52", "ruta": "Camp. Km52 - Planta Pampa Larga", "conductor": "ZAVALETA CHAVEZ LUIS HUMBERTO", "turno": "NOCHE"}, {"codigo": "208", "placa": "T7S-078", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Planta Yanacocha Norte", "conductor": "ZAMORA PORTAL WILDER", "turno": "NOCHE"}, {"codigo": "209", "placa": "CYZ-287", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Huascar", "conductor": "CHAVEZ ZAMBRANO JHON ROSMEL", "turno": "NOCHE"}, {"codigo": "211", "placa": "CAD-599", "estado": "PROGRAMADO", "campamento": "KM 37", "ruta": "Camp. Km37 - Laboratorio Análitico - Planta AWTP", "conductor": "SANCHEZ ZAMORA JESUS", "turno": "NOCHE"}]};
+
+</script>
+<script>
+/* =========================================================
+   Ocupabilidad · Transportes Sagitario · v3
+   Login Microsoft (MSAL) + SharePoint via Graph
+   Identidad automática por correo · roles por correo
+   ========================================================= */
+
+// ============ CONFIGURACIÓN — completar tras registrar en Azure ============
+const CONFIG = {
+  clientId:  "c8bb2957-639f-4d20-9a66-ca890cff99d8",          // ← del registro de app en Azure
+  tenantId:  "28c94e56-38e4-4194-a9c7-e3fd46d7b8e5",          // ← del registro de app en Azure
+  // Sitio y listas de SharePoint
+  spHost:    "transportessagitariosrl050.sharepoint.com",
+  spPath:    "/sites/Sitiodeapps",
+  listas: { conductores:"Conductores", rutas:"Rutas", paraderos:"Paraderos",
+            registros:"Registros", detalle:"DetalleParaderos",
+            puntosalmuerzo:"PuntosAlmuerzo", programacion:"ProgramacionDiaria" },
+  // Correos de rol
+  adminEmail:      "davidizquierdoteran@transportessagitariosrl050.onmicrosoft.com",
+  supervisorEmail: "operaciones@transportessagitariosrl050.onmicrosoft.com",
+};
+// Permisos que la app pedirá al usuario
+const GRAPH_SCOPES = ["User.Read","Sites.ReadWrite.All"];
+
+// Si no hay clientId configurado, la app corre en MODO DEMO (datos locales, sin login real)
+const MODO_DEMO = CONFIG.clientId.startsWith("PEGAR");
+
+// ============ ESTADO ============
+let msal=null, CUENTA=null, TOKEN=null, SITE_ID=null, LIST_IDS={};
+let ROL=null, USUARIO={nombre:'',email:''};
+let DATA={ sites:SITES, rutas:RUTAS, conductores:[] };
+let PROGRAMACION=null; // {fecha, items:[{codigo,placa,estado,turno,...}]}
+let ORIGEN='local';
+let F=nuevoRegistro(), PANTALLA=0, REGISTROS=[], FILTRO_SUP='todos', VISTA_SUP='validar';
+
+// ============ MSAL ============
+function initMsal(){
+  msal = new msalBrowser.PublicClientApplication({
+    auth:{ clientId:CONFIG.clientId, authority:`https://login.microsoftonline.com/${CONFIG.tenantId}`,
+           redirectUri: location.origin+location.pathname },
+    cache:{ cacheLocation:"localStorage", storeAuthStateInCookie:false } // recuerda sesión en el navegador
+  });
+}
+async function loginMS(){
+  try{
+    await msal.initialize();
+    const resp=await msal.loginPopup({scopes:GRAPH_SCOPES});
+    CUENTA=resp.account;
+    await trasLogin();
+  }catch(e){ toast('No se pudo iniciar sesión','err'); console.error(e); }
+}
+async function trySilentLogin(){
+  if(MODO_DEMO) return false;
+  try{
+    await msal.initialize();
+    const cuentas=msal.getAllAccounts();
+    if(!cuentas.length) return false;
+    CUENTA=cuentas[0];
+    const r=await msal.acquireTokenSilent({scopes:GRAPH_SCOPES,account:CUENTA});
+    TOKEN=r.accessToken;
+    await trasLogin(true);
+    return true;
+  }catch(e){ return false; }
+}
+async function getToken(){
+  const r=await msal.acquireTokenSilent({scopes:GRAPH_SCOPES,account:CUENTA});
+  TOKEN=r.accessToken; return TOKEN;
+}
+async function trasLogin(silent){
+  if(!silent){ const r=await msal.acquireTokenSilent({scopes:GRAPH_SCOPES,account:CUENTA}); TOKEN=r.accessToken; }
+  USUARIO.email=(CUENTA.username||'').toLowerCase();
+  USUARIO.nombre=CUENTA.name||'';
+  ROL=rolPorEmail(USUARIO.email);
+  await resolverSitioYListas();
+  await cargarDesdeSP();
+  if(ROL==='conductor') prepararConductor();
+  if(ROL==='supervisor'||ROL==='admin') await cargarRegistrosSP();
+  render();
+}
+function logoutMS(){
+  if(msal&&!MODO_DEMO){ msal.logoutPopup().catch(()=>{}); }
+  CUENTA=null;TOKEN=null;ROL=null;USUARIO={nombre:'',email:''};REGISTROS=[];PANTALLA=0;F=nuevoRegistro();
+  render();
+}
+function rolPorEmail(email){
+  if(email===CONFIG.adminEmail.toLowerCase()) return 'admin';
+  if(email===CONFIG.supervisorEmail.toLowerCase()) return 'supervisor';
+  return 'conductor';
+}
+
+// ============ GRAPH ============
+async function graph(url,method,body){
+  const tok=await getToken();
+  const r=await fetch("https://graph.microsoft.com/v1.0"+url,{
+    method:method||'GET',
+    headers:{Authorization:"Bearer "+tok,"Content-Type":"application/json"},
+    body:body?JSON.stringify(body):undefined
+  });
+  if(!r.ok){ const t=await r.text(); throw new Error("Graph "+r.status+": "+t.slice(0,120)); }
+  return r.status===204?null:r.json();
+}
+async function resolverSitioYListas(){
+  const site=await graph(`/sites/${CONFIG.spHost}:${CONFIG.spPath}`);
+  SITE_ID=site.id;
+  const lists=await graph(`/sites/${SITE_ID}/lists?$select=id,displayName`);
+  (lists.value||[]).forEach(l=>{
+    for(const [k,name] of Object.entries(CONFIG.listas)) if(l.displayName===name) LIST_IDS[k]=l.id;
+  });
+}
+async function listItems(key){
+  const r=await graph(`/sites/${SITE_ID}/lists/${LIST_IDS[key]}/items?$expand=fields&$top=2000`);
+  return (r.value||[]).map(it=>({_id:it.id,...it.fields}));
+}
+async function crearItem(key,fields){
+  return graph(`/sites/${SITE_ID}/lists/${LIST_IDS[key]}/items`,'POST',{fields});
+}
+async function actualizarItem(key,itemId,fields){
+  return graph(`/sites/${SITE_ID}/lists/${LIST_IDS[key]}/items/${itemId}/fields`,'PATCH',fields);
+}
+
+// ============ CARGA DE DATOS ============
+async function cargarDesdeSP(){
+  try{
+    const [cond,rutas,paras]=await Promise.all([listItems('conductores'),listItems('rutas'),listItems('paraderos')]);
+    const parByRuta={};
+    paras.filter(p=>String(p.Activo)!=='No').sort((a,b)=>(+a.Orden||0)-(+b.Orden||0))
+      .forEach(p=>{(parByRuta[String(p.CodigoRuta)]=parByRuta[String(p.CodigoRuta)]||[]).push(p.Paradero);});
+    DATA.rutas=rutas.filter(r=>String(r.Activo)!=='No').map(r=>({
+      codigo:String(r.Title),site:r.Site,placa:r.Placa,unidad:r.Unidad||'',cap:+r.Capacidad||0,
+      ruta:r.RutaDescripcion||'',paraderos:parByRuta[String(r.Title)]||[]}));
+    DATA.conductores=cond.filter(c=>String(c.Activo)!=='No').map(c=>({nombre:c.Title,email:(c.Email||'').toLowerCase()}));
+    // puntos de almuerzo (lista opcional)
+    if(LIST_IDS.puntosalmuerzo){
+      try{ const pa=await listItems('puntosalmuerzo');
+        const activos=pa.filter(x=>String(x.Activo)!=='No').sort((a,b)=>(+a.Orden||0)-(+b.Orden||0)).map(x=>x.Title);
+        if(activos.length) PUNTOS_ALMUERZO=activos;
+      }catch(e){ console.warn('sin lista PuntosAlmuerzo, uso fijos'); }
+    }
+    // programación diaria del día de hoy (lista opcional)
+    if(LIST_IDS.programacion){
+      try{ const pr=await listItems('programacion'); const hoy=hoyISO();
+        const items=pr.filter(x=>String(x.Fecha||'').slice(0,10)===hoy).map(x=>({
+          codigo:String(x.CodigoRuta),placa:x.Placa||'',estado:String(x.EstadoUnidad||'').toUpperCase(),
+          campamento:x.Campamento||'',ruta:x.RutaDescripcion||'',conductor:x.Conductor||'',turno:String(x.Turno||'DIA').toUpperCase()}));
+        if(items.length) PROGRAMACION={fecha:hoy,items};
+      }catch(e){ console.warn('sin lista ProgramacionDiaria'); }
+    }
+    ORIGEN='sharepoint';
+  }catch(e){
+    console.warn('SP no disponible, uso datos locales:',e.message);
+    DATA.rutas=RUTAS; DATA.conductores=CONDUCTORES_DB; ORIGEN='local';
+  }
+}
+async function cargarRegistrosSP(){
+  try{
+    const regs=await listItems('registros');
+    REGISTROS=regs.filter(r=>r.Title&&r.Title.indexOf('EJEMPLO')<0).map(mapRegSP);
+  }catch(e){ console.warn('No pude leer registros:',e.message); }
+}
+function mapRegSP(r){
+  return {id:r.Title,itemId:r._id,fecha:(r.Fecha||'').slice(0,10)||hoyISO(),conductor:r.Conductor,
+    placa:r.Placa,site:r.Site,codigo:String(r.CodigoRuta),ruta:r.RutaDescripcion,cap:+r.Capacidad||0,
+    direccion:r.Direccion,total:+r.TotalPersonal||0,ocup:+r.Ocupabilidad||0,
+    servicios:+r.NumServicios||1,turno:r.Turno,almuerzo:r.Almuerzo,estado:r.Estado||'Pendiente',
+    conductorEmail:(r.ConductorEmail||'').toLowerCase(),detalle:[],ts:r.Created||''};
+}
+
+// Identidad automática: buscar al conductor por su correo
+function prepararConductor(){
+  const yo=DATA.conductores.find(c=>c.email===USUARIO.email);
+  USUARIO.nombre = yo?yo.nombre:(USUARIO.nombre||USUARIO.email);
+  F=nuevoRegistro(); F.conductor=USUARIO.nombre; F.conductorEmail=USUARIO.email;
+  PANTALLA=0;
+}
+
+
+
+
+// =========================================================
+//  MODELO
+// =========================================================
+function nuevoRegistro(){
+  return {id:null,fecha:hoyISO(),conductor:'',conductorEmail:'',site:'',codigo:'',placa:'',cap:0,
+    direccion:'',turno:'',almuerzo:false,conteo:{},conteoAlm:{},estado:'Pendiente',
+    cambioUnidad:false,placaReal:'',capReal:0};
+}
+function turnoRuta(cod){const r=rutaPorCodigo(cod);return r&&r.turno?r.turno:'DIA';}
+function turnoLabel(t){return t==='NOCHE'?'Noche':'Día';}
+// Puntos de almuerzo (fijos). Se sobreescriben desde la lista SharePoint "PuntosAlmuerzo" si existe.
+let PUNTOS_ALMUERZO = ["WTP Oeste (Plataforma 1 y 2)","WTP Este (Plataforma 1 y 2)","Carpas Comedor"];
+// Flota completa (placa → capacidad) para reemplazos de unidad
+function flotaPlacas(){
+  const m={};
+  DATA.rutas.forEach(r=>{ if(r.placa && !(r.placa in m)) m[r.placa]={cap:r.cap,unidad:r.unidad||''}; });
+  return m;
+}
+// Placa y capacidad efectivas del registro (titular o reemplazo)
+function placaEfectiva(){ return F.cambioUnidad&&F.placaReal ? F.placaReal : F.placa; }
+function capEfectiva(){
+  if(F.cambioUnidad&&F.placaReal){ const f=flotaPlacas()[F.placaReal]; return f?f.cap:F.cap; }
+  return F.cap;
+}
+function hoyISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function fechaBonita(iso){const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const [y,m,d]=iso.split('-').map(Number);const dt=new Date(y,m-1,d);return dias[dt.getDay()]+' '+d+' '+meses[m-1];}
+function numSemana(iso){const [y,m,d]=iso.split('-').map(Number);const on=new Date(Date.UTC(y,m-1,d));
+  const day=on.getUTCDay()||7;on.setUTCDate(on.getUTCDate()+4-day);const ys=new Date(Date.UTC(on.getUTCFullYear(),0,1));
+  return Math.ceil((((on-ys)/86400000)+1)/7);}
+function rutaPorCodigo(cod){return DATA.rutas.find(r=>r.codigo===cod);}
+function rutasDeSite(site){return DATA.rutas.filter(r=>r.site===site).sort((a,b)=>(+a.codigo||9999)-(+b.codigo||9999));}
+function siteLabel(id){const s=SITES.find(x=>x.id===id);return s?s.lab:id;}
+function esc(s){return String(s).replace(/"/g,'&quot;');}
+function getColor(p){if(p<0.4)return '#4a9fd4';if(p<0.75)return '#2fbf71';if(p<=1.0)return '#f2a900';return '#e5484d';}
+
+// =========================================================
+//  ARRANQUE
+// =========================================================
+async function iniciar(){
+  if(MODO_DEMO){
+    // demo sin login: datos locales, elige perfil manual
+    DATA.rutas=RUTAS; DATA.conductores=CONDUCTORES_DB; ORIGEN='local';
+    render(); return;
+  }
+  initMsal();
+  render();               // muestra pantalla de login
+  const ok=await trySilentLogin();  // intenta reanudar sesión recordada
+  if(!ok) render();
+}
+
+// =========================================================
+//  RENDER
+// =========================================================
+let _ultimaVista='';
+function render(opts){
+  const noScroll = opts && opts.noScroll;
+  const hdr=document.getElementById('hdr'),abar=document.getElementById('abar');
+  const app=document.getElementById('app');app.className='wrap fadein';
+
+  // Sin sesión (o demo sin rol) → login / selección
+  if(!ROL){ hdr.classList.add('hidden');abar.classList.add('hidden');app.innerHTML=vistaLogin();enganchar();return; }
+
+  hdr.classList.remove('hidden');
+  const pill=document.getElementById('modepill');
+  pill.className='modepill '+(ROL==='conductor'?'cond':'sup');
+  pill.textContent = ROL==='admin'?'Administrador':(ROL==='supervisor'?'Supervisor':'Conductor');
+
+  if(ROL==='supervisor'||ROL==='admin'){abar.classList.add('hidden');pintarPasos(true);app.innerHTML=vistaSupervisor();enganchar();
+    scrollSiCambia('sup-'+VISTA_SUP,noScroll);return;}
+
+  abar.classList.remove('hidden');pintarPasos();
+  if(PANTALLA===0)app.innerHTML=vistaConductor();
+  else if(PANTALLA===1)app.innerHTML=vistaServicio();
+  else if(PANTALLA===2)app.innerHTML=vistaParaderos();
+  else app.innerHTML=vistaRevision();
+  pintarAcciones();enganchar();
+  scrollSiCambia('cond-'+PANTALLA,noScroll);
+}
+// Solo sube al tope cuando de verdad cambiamos de pantalla, no en cada redibujo
+function scrollSiCambia(vista,noScroll){
+  if(noScroll) return;
+  if(vista!==_ultimaVista){ window.scrollTo(0,0); _ultimaVista=vista; }
+}
+function pintarPasos(hide){const s=document.getElementById('steps');
+  if(hide){s.innerHTML='';return;}
+  s.innerHTML=[0,1,2,3].map(i=>{let c='step';if(i<PANTALLA)c+=' done';else if(i===PANTALLA)c+=' cur';return `<div class="${c}"></div>`;}).join('');}
+
+// ---------------------------------------------------------
+//  LOGIN
+// ---------------------------------------------------------
+function vistaLogin(){
+  if(MODO_DEMO){
+    // demo: selección manual de perfil
+    return `<div class="gate fadein">
+      <div class="mark">TS</div><h2>Registro de Ocupabilidad</h2>
+      <p>Transportes Sagitario · <b style="color:var(--amber)">MODO DEMO</b><br>
+      <span style="font-size:12px">Sin Azure configurado. Elige un perfil para probar.</span></p>
+      <div class="rolebtns">
+        <button class="rolebtn cond" onclick="demoRol('conductor')"><span class="ic">🚍</span><span>Probar como conductor<small>Registrar servicio</small></span></button>
+        <button class="rolebtn sup" onclick="demoRol('supervisor')"><span class="ic">✓</span><span>Probar como supervisor<small>Revisar y aprobar</small></span></button>
+      </div>
+      <p class="srcnote">Datos: <b>local (demo)</b></p></div>`;
+  }
+  return `<div class="gate fadein">
+    <div class="mark">TS</div><h2>Registro de Ocupabilidad</h2>
+    <p>Transportes Sagitario<br><span style="font-size:12px">Inicia sesión con tu correo de la empresa</span></p>
+    <div class="rolebtns">
+      <button class="rolebtn cond" style="justify-content:center" onclick="loginMS()">
+        <span class="ic" style="background:rgba(74,159,212,.16);color:var(--blue)">🔐</span>
+        <span>Iniciar sesión con Microsoft<small>Se recordará en este dispositivo</small></span>
+      </button>
+    </div>
+    <p class="srcnote">Tu identidad y rol se detectan automáticamente por tu correo.</p></div>`;
+}
+function demoRol(r){
+  ROL=r;
+  if(r==='conductor'){USUARIO={nombre:DATA.conductores[0].nombre,email:DATA.conductores[0].email};
+    F=nuevoRegistro();F.conductor=USUARIO.nombre;F.conductorEmail=USUARIO.email;PANTALLA=0;}
+  else { sembrarDemo(); }
+  render();
+}
+function sembrarDemo(){
+  // programación demo (si está embebida)
+  if(typeof PROG_DEMO!=='undefined' && !PROGRAMACION){
+    PROGRAMACION={fecha:hoyISO(),items:PROG_DEMO.items.map(p=>({codigo:String(p.codigo),placa:p.placa,estado:p.estado,campamento:p.campamento,ruta:p.ruta,conductor:p.conductor,turno:p.turno}))};
+  }
+  // registros de ejemplo para ver la vista supervisor en demo
+  if(REGISTROS.length) return;
+  const r=DATA.rutas.find(x=>x.codigo==='314')||DATA.rutas[0];
+  const r2=DATA.rutas[1]||r;
+  REGISTROS=[
+    {id:'REG-DEMO-1',fecha:hoyISO(),conductor:DATA.conductores[0].nombre,conductorEmail:DATA.conductores[0].email,placa:r.placa,site:r.site,codigo:r.codigo,
+     ruta:r.ruta,cap:r.cap,direccion:'SUBIDA',total:Math.round(r.cap*0.9),ocup:0.9,servicios:1,turno:r.turno||'DIA',
+     almuerzo:'NO APLICA',estado:'Pendiente',detalle:[],ts:new Date().toISOString()},
+    {id:'REG-DEMO-2',fecha:hoyISO(),conductor:DATA.conductores[1].nombre,conductorEmail:DATA.conductores[1].email,placa:r2.placa,site:r2.site,
+     codigo:r2.codigo,ruta:r2.ruta,cap:r2.cap,direccion:'BAJADA',
+     total:Math.round(r2.cap*0.6),ocup:0.6,servicios:1,turno:r2.turno||'DIA',almuerzo:'APLICA',
+     estado:'Aprobado',detalle:[],ts:new Date(Date.now()-3600000).toISOString()},
+  ];
+}
+
+// ---------------------------------------------------------
+//  PANTALLA 0 — Conductor (identidad ya conocida) + site
+// ---------------------------------------------------------
+function vistaConductor(){
+  const siteChips=SITES.map(s=>`
+    <button class="chip wide ${F.site===s.id?'on':''}" data-site="${s.id}">
+      ${s.lab}<small>${s.sub} · ${rutasDeSite(s.id).length} rutas</small></button>`).join('');
+  return `
+  <div class="savedbar">
+    <div class="cnt" id="miniCnt">${REGISTROS.filter(r=>r.conductorEmail===USUARIO.email).length}</div>
+    <div class="lbl">tus registros hoy<br><b>${fechaBonita(F.fecha)}</b></div>
+    <button class="linkbtn" onclick="logoutMS()">Salir</button>
+  </div>
+  <section class="card">
+    <div class="card-h"><span class="card-n">1</span><h2>Hola, ${primerNombre(USUARIO.nombre)}</h2>
+      <span class="sub">${ORIGEN==='sharepoint'?'●':'○'}</span></div>
+    <p class="hint" style="margin:-6px 0 14px">Registrando como <b>${USUARIO.nombre}</b></p>
+    <label class="fld">Site / Campamento <span class="req">*</span></label>
+    <div class="chips">${siteChips}</div>
+    <p class="hint">Elige el campamento de tu ruta para encontrarla más rápido.</p>
+  </section>`;
+}
+function primerNombre(n){ if(!n)return ''; const p=n.trim().split(/\s+/); return p[p.length>2?2:0]||p[0]; }
+
+// ---------------------------------------------------------
+//  PANTALLA 1 — Ruta, dirección, turno
+// ---------------------------------------------------------
+function vistaServicio(){
+  const rutas=rutasDeSite(F.site);
+  const opts=rutas.map(r=>`<option value="${r.codigo}"${F.codigo===r.codigo?' selected':''}>${r.codigo} · ${r.ruta}</option>`).join('');
+  let info='';
+  if(F.codigo){const r=rutaPorCodigo(F.codigo);const tn=r.turno==='NOCHE';
+    info=`<div class="gauge" style="margin-top:12px"><div class="gtags" style="margin:0">
+      <div class="gtag">Placa <b>${r.placa||'—'}</b></div><div class="gtag">Unidad <b>${r.unidad||'—'}</b></div>
+      <div class="gtag">Capacidad <b>${r.cap}</b></div><div class="gtag">Paraderos <b>${r.paraderos.length}</b></div>
+      <div class="gtag">Turno <b style="color:${tn?'var(--violet)':'var(--amber)'}">${turnoLabel(r.turno)}</b></div></div></div>`;}
+  return `
+  <section class="card">
+    <div class="card-h"><span class="card-n">2</span><h2>Servicio</h2><span class="sub">${siteLabel(F.site)}</span></div>
+    <label class="fld">Código de ruta <span class="req">*</span></label>
+    <select class="big ${F.codigo?'filled':''}" id="selRuta"><option value="">— Selecciona la ruta —</option>${opts}</select>
+    ${info}
+    <div style="height:18px"></div>
+    <label class="fld">Dirección del servicio <span class="req">*</span></label>
+    <div class="chips">
+      <button class="chip dir ${F.direccion==='SUBIDA'?'on':''}" data-dir="SUBIDA">Subida<small>Ida · 1 servicio</small></button>
+      <button class="chip dir ${F.direccion==='BAJADA'?'on':''}" data-dir="BAJADA">Bajada<small>Retorno · 1 servicio</small></button>
+    </div>
+    <p class="hint">Cada subida y cada bajada es <b>un servicio</b>. El turno se toma automáticamente de la ruta.</p>
+    ${F.codigo?bloqueCambioUnidad():''}
+  </section>`;
+}
+
+// ---------------------------------------------------------
+//  PANTALLA 2 — Paraderos
+// ---------------------------------------------------------
+function bloqueCambioUnidad(){
+  const rutaCap = F.cap;
+  let selBloque='';
+  if(F.cambioUnidad){
+    const flota=flotaPlacas();
+    const placas=Object.keys(flota).sort();
+    const opts=placas.map(p=>`<option value="${p}"${F.placaReal===p?' selected':''}>${p} · ${flota[p].cap} pers.${flota[p].unidad?' · '+flota[p].unidad:''}</option>`).join('');
+    let aviso='';
+    if(F.placaReal){
+      const cr=flota[F.placaReal]?flota[F.placaReal].cap:rutaCap;
+      const dif = cr!==rutaCap;
+      aviso=`<p class="hint" style="margin-top:8px">Registro con placa <b>${F.placaReal}</b> (capacidad <b>${cr}</b>)${dif?`, distinta a la titular ${F.placa} (${rutaCap})`:''}. La ruta y su código se mantienen.</p>`;
+    }
+    selBloque=`
+      <div style="height:12px"></div>
+      <label class="fld">Placa de la unidad usada <span class="req">*</span></label>
+      <select class="big ${F.placaReal?'filled':''}" id="selPlacaReal">
+        <option value="">— Selecciona la placa real —</option>${opts}
+      </select>${aviso}`;
+  }
+  return `
+    <div style="height:18px"></div>
+    <label class="fld">¿Cambiaste de unidad?</label>
+    <div class="chips">
+      <button class="chip ${F.cambioUnidad?'on':''}" data-cu="1">Sí, otra unidad<small>Elegir placa real</small></button>
+      <button class="chip ${!F.cambioUnidad?'on':''}" data-cu="0">No, la titular<small>${F.placa||'—'}</small></button>
+    </div>
+    ${selBloque}`;
+}
+
+function vistaParaderos(){
+  const r=rutaPorCodigo(F.codigo);
+  const pars=r.paraderos.length?r.paraderos:['Origen','Destino'];
+  const dir=F.direccion==='SUBIDA'?'subida':'bajada';
+  const parHtml=pars.map((p,i)=>{const c=F.conteo[p]||{n:null};const filled=(c.n!==null);
+    return `<div class="par ${filled?'filled':''}">
+      <div class="par-top"><span class="par-ord">${i+1}</span><span class="par-name">${p}</span></div>
+      <div class="stepline" style="gap:10px">
+        <button class="sbtn" data-p="${esc(p)}" data-f="n" data-d="-1">−</button>
+        <input class="sin" data-pn="${esc(p)}" inputmode="numeric" value="${c.n??''}" placeholder="0" style="font-size:26px;height:48px">
+        <button class="sbtn plus" data-p="${esc(p)}" data-f="n" data-d="1">+</button>
+        <div style="flex:1;text-align:left;font-size:12px;color:var(--muted);font-weight:600">personas</div>
+      </div></div>`;}).join('');
+  return `
+  <section class="card">
+    <div class="card-h"><span class="card-n">3</span><h2>Personal por paradero</h2>
+      <span class="sub">${F.direccion==='SUBIDA'?'Subida':'Bajada'} · cap ${capEfectiva()}</span></div>
+    <p class="hint" style="margin:0 0 12px">Cuántas personas en total en cada punto de la ${dir}.</p>
+    ${parHtml}
+    ${gaugeParaderos(r)}
+    <div style="height:16px"></div>
+    <label class="fld">¿Hubo servicio de almuerzos?</label>
+    <div class="chips">
+      <button class="chip ${F.almuerzo?'on':''}" data-alm="1">Sí aplica<small>Contar por punto</small></button>
+      <button class="chip ${!F.almuerzo?'on':''}" data-alm="0">No aplica<small>Omitir</small></button>
+    </div>
+    ${F.almuerzo?bloqueAlmuerzos():''}
+  </section>`;
+}
+
+function bloqueAlmuerzos(){
+  const pts=PUNTOS_ALMUERZO.length?PUNTOS_ALMUERZO:['Comedor'];
+  const html=pts.map((p,i)=>{const c=F.conteoAlm[p]||{n:null};const filled=(c.n!==null);
+    return `<div class="par ${filled?'filled':''}">
+      <div class="par-top"><span class="par-ord" style="background:var(--amber);color:#111">${i+1}</span><span class="par-name">${p}</span></div>
+      <div class="stepline" style="gap:10px">
+        <button class="sbtn" data-pa="${esc(p)}" data-da="-1">−</button>
+        <input class="sin" data-pan="${esc(p)}" inputmode="numeric" value="${c.n??''}" placeholder="0" style="font-size:26px;height:48px">
+        <button class="sbtn plus" data-pa="${esc(p)}" data-da="1">+</button>
+        <div style="flex:1;text-align:left;font-size:12px;color:var(--muted);font-weight:600">almuerzos</div>
+      </div></div>`;}).join('');
+  const tot=totalAlmuerzos();
+  return `<div style="height:12px"></div>
+    <label class="fld" style="color:var(--amber)">Almuerzos por punto</label>
+    <p class="hint" style="margin:0 0 10px">Cuántos almuerzos en cada plataforma y comedor.</p>
+    ${html}
+    <div class="gauge" style="margin-top:8px"><div class="gtags" style="margin:0">
+      <div class="gtag">Total almuerzos <b style="color:var(--amber)" id="totAlmView">${tot}</b></div></div></div>`;
+}
+function totalAlmuerzos(){let t=0;Object.values(F.conteoAlm).forEach(c=>{t+=(+c.n||0);});return t;}
+function totales(){let tot=0;Object.values(F.conteo).forEach(c=>{tot+=(+c.n||0);});return {tot};}
+function ocupabilidad(r){const cap=capEfectiva()||(r?r.cap:0);if(!cap)return 0;return totales().tot/cap;}
+function gaugeParaderos(r){
+  const {tot}=totales();const any=Object.keys(F.conteo).length>0;
+  if(!any)return `<div class="gauge" id="gaugeRuta"><div class="gauge-top"><span class="gauge-lab">Ocupabilidad</span>
+    <span class="gauge-val" style="color:var(--dim)">—</span></div><div class="bar"><div class="bar-fill"></div></div>
+    <div class="gtags"><span class="gtag">Ingresa el conteo para ver el índice</span></div></div>`;
+  const oc=ocupabilidad(r);const col=getColor(oc);
+  return `<div class="gauge" id="gaugeRuta"><div class="gauge-top"><span class="gauge-lab">Ocupabilidad · ${F.direccion==='SUBIDA'?'subida':'bajada'}</span>
+    <span class="gauge-val" style="color:${col}">${(oc*100).toFixed(0)}<small>%</small></span></div>
+    <div class="bar"><div class="bar-fill" style="width:${Math.min(oc*100,100)}%;background:${col}"></div><div class="bar-100"></div></div>
+    <div class="gtags"><span class="gtag">Total personal <b>${tot}</b></span><span class="gtag">Capacidad <b>${capEfectiva()||r.cap}</b></span></div></div>`;
+}
+
+// ---------------------------------------------------------
+//  PANTALLA 3 — Revisión
+// ---------------------------------------------------------
+function vistaRevision(){
+  const r=rutaPorCodigo(F.codigo);const {tot}=totales();const oc=ocupabilidad(r);const col=getColor(oc);
+  const placaRow = F.cambioUnidad&&F.placaReal
+    ? ['Placa', F.placaReal+' (reemplazo · titular '+F.placa+')']
+    : ['Placa', r.placa];
+  const rows=[['Fecha',fechaBonita(F.fecha)],['Conductor',F.conductor],['Site',siteLabel(F.site)],
+    ['Ruta',F.codigo+' · '+r.ruta],placaRow,['Capacidad',capEfectiva()+' pers.'],
+    ['Dirección',F.direccion==='SUBIDA'?'Subida (1 servicio)':'Bajada (1 servicio)'],
+    ['Turno',turnoLabel(r.turno)+' (según ruta)'],['Total personal',tot+' pers.'],
+    ['Almuerzos',F.almuerzo?('Aplica · '+totalAlmuerzos()+' almuerzos'):'No aplica']];
+  const rowsH=rows.map(([k,v])=>`<div class="rrow"><span class="rk">${k}</span><span class="rv">${v}</span></div>`).join('');
+  const det=(r.paraderos.length?r.paraderos:['Origen','Destino']).map((p,i)=>{const c=F.conteo[p]||{n:0};
+    return `<div class="rrow"><span class="rk">${i+1}. ${p}</span><span class="rv">${c.n||0} pers.</span></div>`;}).join('');
+  return `<section class="card">
+    <div class="card-h"><span class="card-n">4</span><h2>Revisa y envía</h2></div>
+    <div class="gauge" style="margin-bottom:14px"><div class="gauge-top"><span class="gauge-lab">Ocupabilidad del servicio</span>
+      <span class="gauge-val" style="color:${col}">${(oc*100).toFixed(0)}<small>%</small></span></div>
+      <div class="bar"><div class="bar-fill" style="width:${Math.min(oc*100,100)}%;background:${col}"></div><div class="bar-100"></div></div></div>
+    <div class="review">${rowsH}</div>
+    <div class="card-h" style="margin:18px 0 8px"><h2 style="font-size:13px;color:var(--muted)">Detalle por paradero</h2></div>
+    <div class="review">${det}</div>
+    <p class="hint">Al enviar, queda <b>pendiente</b> hasta que el supervisor apruebe.</p></section>`;
+}
+
+// ---------------------------------------------------------
+//  ACCIONES
+// ---------------------------------------------------------
+function pintarAcciones(){
+  const a=document.getElementById('actions');
+  if(PANTALLA===0){const ok=F.site;a.innerHTML=`<button class="btn btn-primary" ${ok?'':'disabled'} onclick="siguiente()">Continuar</button>`;}
+  else if(PANTALLA===1){const ok=F.codigo&&F.direccion&&(!F.cambioUnidad||F.placaReal);a.innerHTML=`<button class="btn btn-ghost" onclick="atras()">←</button><button class="btn btn-primary" ${ok?'':'disabled'} onclick="siguiente()">Continuar</button>`;}
+  else if(PANTALLA===2){const ok=Object.keys(F.conteo).length>0;a.innerHTML=`<button class="btn btn-ghost" onclick="atras()">←</button><button class="btn btn-primary" ${ok?'':'disabled'} onclick="siguiente()">Revisar</button>`;}
+  else{a.innerHTML=`<button class="btn btn-ghost" onclick="atras()">←</button><button class="btn btn-amber" onclick="enviar()">✓ Enviar registro</button>`;}
+}
+function siguiente(){if(PANTALLA<3){PANTALLA++;render();}}
+function atras(){if(PANTALLA>0){PANTALLA--;render();}}
+
+// =========================================================
+//  ENVÍO (conductor)
+// =========================================================
+async function enviar(){
+  const reg=construirRegistro();
+  let okSP=false;
+  if(!MODO_DEMO && SITE_ID && LIST_IDS.registros){
+    try{ await spCrearRegistro(reg); okSP=true; }
+    catch(e){ console.warn('No pude escribir en SP:',e.message); toast('Guardado local (SP falló)','err'); }
+  }
+  REGISTROS.push(reg);
+  if(okSP) toast('✓ Enviado a SharePoint');
+  else if(MODO_DEMO) toast('✓ Registro guardado (demo)');
+  const site=F.site;
+  F=nuevoRegistro();F.conductor=USUARIO.nombre;F.conductorEmail=USUARIO.email;F.site=site;
+  PANTALLA=1;render();
+}
+function construirRegistro(){
+  const r=rutaPorCodigo(F.codigo);const {tot}=totales();const oc=ocupabilidad(r);
+  const pars=r.paraderos.length?r.paraderos:['Origen','Destino'];
+  const detalle=pars.map((p,i)=>{const c=F.conteo[p]||{n:0};return {paradero:p,orden:i+1,n:+c.n||0};});
+  const placaUsada=placaEfectiva(); const capUsada=capEfectiva();
+  const almDetalle = F.almuerzo ? PUNTOS_ALMUERZO.map((p,i)=>({punto:p,orden:i+1,n:+(F.conteoAlm[p]&&F.conteoAlm[p].n)||0})).filter(x=>x.n>0) : [];
+  const totAlm = almDetalle.reduce((a,x)=>a+x.n,0);
+  return {id:'REG-'+F.fecha.replace(/-/g,'')+'-'+Date.now().toString().slice(-6),fecha:F.fecha,
+    conductor:F.conductor,conductorEmail:F.conductorEmail,placa:placaUsada,placaTitular:r.placa,
+    cambioUnidad:F.cambioUnidad&&!!F.placaReal,site:F.site,codigo:F.codigo,ruta:r.ruta,
+    cap:capUsada,direccion:F.direccion,total:tot,ocup:oc,servicios:1,turno:r.turno,
+    almuerzo:F.almuerzo?'APLICA':'NO APLICA',totAlmuerzos:totAlm,almDetalle,
+    estado:'Pendiente',detalle,ts:new Date().toISOString()};
+}
+async function spCrearRegistro(reg){
+  const res=await crearItem('registros',{
+    Title:reg.id,Fecha:reg.fecha,Conductor:reg.conductor,ConductorEmail:reg.conductorEmail,Placa:reg.placa,
+    PlacaTitular:reg.placaTitular,CambioUnidad:reg.cambioUnidad?'Sí':'No',
+    Site:reg.site,CodigoRuta:reg.codigo,RutaDescripcion:reg.ruta,Capacidad:reg.cap,Direccion:reg.direccion,
+    TotalPersonal:reg.total,Ocupabilidad:reg.ocup,NumServicios:reg.servicios,
+    Turno:reg.turno,Almuerzo:reg.almuerzo,TotalAlmuerzos:reg.totAlmuerzos||0,Estado:'Pendiente'});
+  reg.itemId=res&&res.id;
+  if(LIST_IDS.detalle){
+    for(const d of reg.detalle){
+      try{ await crearItem('detalle',{Title:reg.id+'-'+d.orden,RegistroID:reg.id,CodigoRuta:reg.codigo,
+        Paradero:d.paradero,Orden:d.orden,Personal:d.n,Direccion:reg.direccion,Tipo:'RUTA'}); }
+      catch(e){ console.warn('detalle falló',e.message); }
+    }
+    for(const a of (reg.almDetalle||[])){
+      try{ await crearItem('detalle',{Title:reg.id+'-ALM-'+a.orden,RegistroID:reg.id,CodigoRuta:reg.codigo,
+        Paradero:a.punto,Orden:a.orden,Personal:a.n,Direccion:reg.direccion,Tipo:'ALMUERZO'}); }
+      catch(e){ console.warn('detalle almuerzo falló',e.message); }
+    }
+  }
+}
+
+// =========================================================
+//  VISTA SUPERVISOR / ADMIN
+// =========================================================
+function vistaSupervisor(){
+  const cab=`
+  <div class="savedbar">
+    <div class="cnt" style="color:var(--violet)">${REGISTROS.filter(r=>r.fecha===hoyISO()).length}</div>
+    <div class="lbl">registros · <b>${fechaBonita(hoyISO())}</b><br><span style="font-size:11px">${USUARIO.nombre||USUARIO.email}</span></div>
+    <button class="linkbtn" onclick="logoutMS()">Salir</button>
+  </div>
+  <div class="filtro" style="margin-bottom:6px">
+    <button class="fbtn ${VISTA_SUP==='validar'?'on':''}" data-vsup="validar" style="flex:1">✓ Validar</button>
+    <button class="fbtn ${VISTA_SUP==='prog'?'on':''}" data-vsup="prog" style="flex:1">📋 Programación</button>
+  </div>`;
+  return cab + (VISTA_SUP==='prog' ? panelProgramacion() : panelValidar());
+}
+
+function panelValidar(){
+  const hoy=REGISTROS.filter(r=>r.fecha===hoyISO());
+  const lista=hoy.length?hoy:REGISTROS;
+  const pend=lista.filter(r=>r.estado==='Pendiente').length;
+  const aprob=lista.filter(r=>r.estado==='Aprobado').length;
+  const servicios=lista.filter(r=>r.estado==='Aprobado').reduce((a,r)=>a+(r.servicios||1),0);
+  let items=lista.slice();
+  if(FILTRO_SUP==='pend')items=items.filter(r=>r.estado==='Pendiente');
+  else if(FILTRO_SUP==='aprob')items=items.filter(r=>r.estado==='Aprobado');
+  items.sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+  const cards=items.length?items.map(cardSup).join(''):`<div class="empty">No hay registros ${FILTRO_SUP==='pend'?'pendientes':FILTRO_SUP==='aprob'?'aprobados':''} todavía.</div>`;
+  const puedeAdmin = ROL==='admin';
+  return `
+  <div class="kpis">
+    <div class="kpi a"><div class="n">${pend}</div><div class="l">Pendientes</div></div>
+    <div class="kpi g"><div class="n">${aprob}</div><div class="l">Aprobados</div></div>
+    <div class="kpi b"><div class="n">${servicios}</div><div class="l">Servicios</div></div>
+  </div>
+  <div class="filtro">
+    <button class="fbtn ${FILTRO_SUP==='todos'?'on':''}" data-filtro="todos">Todos</button>
+    <button class="fbtn ${FILTRO_SUP==='pend'?'on':''}" data-filtro="pend">Pendientes</button>
+    <button class="fbtn ${FILTRO_SUP==='aprob'?'on':''}" data-filtro="aprob">Aprobados</button>
+  </div>
+  ${cards}
+  <div style="display:flex;gap:9px;margin:16px 0">
+    <button class="btn btn-primary" style="height:50px" onclick="exportarCSV()">⬇ Exportar aprobados</button>
+    <button class="btn btn-ghost" style="width:auto;padding:0 16px;height:50px" onclick="copiarTabla()">Copiar</button>
+  </div>
+  <p class="srcnote">Fuente: <b>${ORIGEN==='sharepoint'?'SharePoint':'local (demo)'}</b>${puedeAdmin?' · Rol admin':''}</p>`;
+}
+
+function panelProgramacion(){
+  if(!PROGRAMACION||!PROGRAMACION.items.length){
+    return `<div class="empty">No hay programación cargada para hoy.<br><span style="font-size:12px">Sube la ProgramacionDiaria del día a SharePoint para ver qué rutas faltan reportar.</span></div>`;
+  }
+  // filtrar filas válidas: con código real (no "-", no vacío, no SIN SERVICIO)
+  const validos=PROGRAMACION.items.filter(p=>{
+    const c=String(p.codigo||'').trim();
+    return c && c!=='-' && /\d/.test(c) && (p.ruta||'').toUpperCase().indexOf('SIN SERVICIO')<0;
+  });
+  // deduplicar por código (un código cuenta una vez; conserva la primera aparición, marca si tiene día+noche)
+  const porCodigo={};
+  validos.forEach(p=>{
+    const c=String(p.codigo);
+    if(!porCodigo[c]) porCodigo[c]={...p,turnos:new Set([p.turno])};
+    else porCodigo[c].turnos.add(p.turno);
+  });
+  const unicos=Object.values(porCodigo);
+  const programadas=unicos.filter(p=>p.estado.indexOf('NO')<0);
+  const noProg=unicos.filter(p=>p.estado.indexOf('NO')>=0);
+  const reportados=new Set(REGISTROS.filter(r=>r.fecha===hoyISO()).map(r=>String(r.codigo)));
+  const faltantes=programadas.filter(p=>!reportados.has(String(p.codigo)));
+  const reportadasProg=programadas.filter(p=>reportados.has(String(p.codigo)));
+  const pct = programadas.length? Math.round(reportadasProg.length/programadas.length*100):0;
+  const col = pct>=100?'var(--green)':pct>=60?'var(--amber)':'var(--red)';
+
+  let lista, etiqueta;
+  if(FILTRO_SUP==='reportadas'){ lista=reportadasProg; etiqueta='reportadas'; }
+  else if(FILTRO_SUP==='faltantes'){ lista=faltantes; etiqueta='faltantes'; }
+  else { lista=programadas; etiqueta='programadas'; }
+
+  const filas = lista.length? lista.sort((a,b)=>(+a.codigo||0)-(+b.codigo||0)).map(p=>{
+    const rep=reportados.has(String(p.codigo));
+    const ambosTurnos = p.turnos && p.turnos.size>1;
+    return `<div class="regc" style="padding:11px 13px">
+      <div class="regc-h" style="margin-bottom:4px">
+        <span class="regc-cod">${p.codigo}</span>
+        <span class="badge ${rep?'aprob':'pend'}">${rep?'Reportada':'Falta'}</span>
+        <span style="margin-left:auto;font-size:12px;color:var(--muted)">${ambosTurnos?'Día+Noche':(p.turno==='NOCHE'?'Noche':'Día')}</span>
+      </div>
+      <div class="regc-m" style="font-size:12.5px">${p.placa||'—'} · ${p.ruta||''}${p.conductor?'<br>'+p.conductor:''}</div>
+    </div>`;}).join('')
+    : `<div class="empty">Ninguna ruta ${etiqueta}.</div>`;
+
+  return `
+  <div class="gauge" style="margin:4px 0 14px">
+    <div class="gauge-top"><span class="gauge-lab">Avance del día · rutas reportadas</span>
+      <span class="gauge-val" style="color:${col}">${pct}<small>%</small></span></div>
+    <div class="bar"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
+    <div class="gtags"><span class="gtag">Reportadas <b>${reportadasProg.length}/${programadas.length}</b></span>
+      <span class="gtag">No programadas <b>${noProg.length}</b></span></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi b"><div class="n">${programadas.length}</div><div class="l">Programadas</div></div>
+    <div class="kpi g"><div class="n">${reportadasProg.length}</div><div class="l">Reportadas</div></div>
+    <div class="kpi a"><div class="n">${faltantes.length}</div><div class="l">Faltan</div></div>
+  </div>
+  <div class="filtro">
+    <button class="fbtn ${FILTRO_SUP==='todos'?'on':''}" data-filtro="todos">Programadas</button>
+    <button class="fbtn ${FILTRO_SUP==='reportadas'?'on':''}" data-filtro="reportadas">Reportadas</button>
+    <button class="fbtn ${FILTRO_SUP==='faltantes'?'on':''}" data-filtro="faltantes">Faltantes</button>
+  </div>
+  ${filas}
+  <p class="srcnote" style="margin-top:14px">Programación del <b>${fechaBonita(PROGRAMACION.fecha)}</b> · fuente <b>${ORIGEN==='sharepoint'?'SharePoint':'local (demo)'}</b></p>`;
+}
+function cardSup(r){
+  const oc=(r.ocup*100).toFixed(0);const col=getColor(r.ocup);const ap=r.estado==='Aprobado';
+  return `<div class="regc ${ap?'aprob':''}">
+    <div class="regc-h"><span class="regc-cod">${r.codigo}</span>
+      <span class="badge ${ap?'aprob':'pend'}">${ap?'Aprobado':'Pendiente'}</span>
+      <span class="regc-oc" style="color:${col}">${oc}%</span></div>
+    <div class="regc-m"><b>${r.conductor}</b> · ${r.placa}${r.cambioUnidad?' <span style="color:var(--amber);font-weight:700">⚠ reemplazo</span>':''}<br>
+      ${siteLabel(r.site)} · ${r.direccion==='SUBIDA'?'Subida':'Bajada'} · ${r.turno==='NOCHE'?'Noche':'Día'}<br>
+      ${r.total} personas · cap ${r.cap}${r.cambioUnidad&&r.placaTitular?' · titular '+r.placaTitular:''}</div>
+    <div class="regc-acts">
+      <button class="be" onclick="verDetalle('${r.id}')">Ver / Editar</button>
+      ${ap?`<button class="be" onclick="cambiarEstado('${r.id}','Pendiente')">Reabrir</button>`
+          :`<button class="ba" onclick="cambiarEstado('${r.id}','Aprobado')">✓ Aprobar</button>`}
+    </div></div>`;
+}
+function regById(id){return REGISTROS.find(r=>r.id===id);}
+async function cambiarEstado(id,estado){
+  const r=regById(id);if(!r)return;r.estado=estado;
+  if(!MODO_DEMO && r.itemId && LIST_IDS.registros){
+    try{ await actualizarItem('registros',r.itemId,{Estado:estado,RevisadoPor:USUARIO.email,FechaRevision:new Date().toISOString()}); }
+    catch(e){ console.warn('No pude actualizar estado:',e.message); }
+  }
+  toast(estado==='Aprobado'?'✓ Aprobado':'Reabierto');render();
+}
+function verDetalle(id){
+  const r=regById(id);if(!r)return;
+  document.getElementById('modalTitle').textContent=r.codigo+' · '+r.conductor;
+  const rutaObj=rutaPorCodigo(r.codigo)||{paraderos:[]};
+  const pars=r.detalle&&r.detalle.length?r.detalle:(rutaObj.paraderos.length?rutaObj.paraderos:['Origen','Destino']).map((p,i)=>({paradero:p,orden:i+1,n:0}));
+  const parRows=pars.map((d,i)=>`<div class="par">
+    <div class="par-top"><span class="par-ord">${i+1}</span><span class="par-name">${d.paradero}</span></div>
+    <div class="stepline" style="gap:10px">
+      <input class="sin" data-edit="${id}" data-i="${i}" data-f="n" inputmode="numeric" value="${d.n||0}" style="height:46px">
+      <div style="flex:1;text-align:left;font-size:12px;color:var(--muted);font-weight:600">personas</div>
+    </div></div>`).join('');
+  document.getElementById('modalBody').innerHTML=`
+    <div class="review" style="margin-bottom:14px">
+      <div class="rrow"><span class="rk">Placa</span><span class="rv">${r.placa}</span></div>
+      <div class="rrow"><span class="rk">Dirección</span><span class="rv">${r.direccion==='SUBIDA'?'Subida':'Bajada'}</span></div>
+      <div class="rrow"><span class="rk">Capacidad</span><span class="rv">${r.cap}</span></div>
+      <div class="rrow"><span class="rk">Estado</span><span class="rv">${r.estado}</span></div></div>
+    <label class="fld">Corregir conteo por paradero</label>${parRows}
+    <div style="display:flex;gap:9px;margin-top:16px">
+      <button class="btn btn-ghost" style="width:auto;flex:1" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarEdicion('${id}')">Guardar cambios</button></div>`;
+  document.getElementById('modal').classList.add('show');
+  document.querySelectorAll('[data-edit]').forEach(inp=>inp.oninput=()=>{inp.value=inp.value.replace(/[^0-9]/g,'');});
+}
+async function guardarEdicion(id){
+  const r=regById(id);if(!r)return;
+  const pars=r.detalle&&r.detalle.length?r.detalle:[];
+  document.querySelectorAll(`[data-edit="${id}"]`).forEach(inp=>{const i=+inp.dataset.i,f=inp.dataset.f,v=+inp.value||0;if(pars[i])pars[i][f]=v;});
+  r.total=pars.reduce((a,d)=>a+(+d.n||0),0);r.ocup=r.cap?r.total/r.cap:0;r.detalle=pars;
+  if(!MODO_DEMO && r.itemId && LIST_IDS.registros){
+    try{ await actualizarItem('registros',r.itemId,{TotalPersonal:r.total,Ocupabilidad:r.ocup}); }
+    catch(e){ console.warn('No pude actualizar:',e.message); }
+  }
+  cerrarModal();toast('✓ Cambios guardados');render();
+}
+function cerrarModal(){document.getElementById('modal').classList.remove('show');}
+
+// =========================================================
+//  EXPORTACIÓN
+// =========================================================
+const CABECERAS=['FECHA','DIA','SEMANA','SITE','CODIFICACION','RUTA','PLACA','PLACA TITULAR','CAMBIO UNIDAD','CAPACIDAD','DIRECCION',
+  'TOTAL PERSONAL','OCUPABILIDAD','N° SERVICIOS','TURNO','ALMUERZO','TOTAL ALMUERZOS','ESTADO','CONDUCTOR','CORREO','REGISTRADO'];
+function filaArr(r){const dias=['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
+  const [y,m,d]=r.fecha.split('-').map(Number);
+  return [r.fecha,dias[new Date(y,m-1,d).getDay()],numSemana(r.fecha),r.site,r.codigo,r.ruta,r.placa,r.placaTitular||r.placa,(r.cambioUnidad?'Sí':'No'),r.cap,r.direccion,
+    r.total,r.ocup,r.servicios||1,r.turno,r.almuerzo,r.totAlmuerzos||0,r.estado,r.conductor,r.conductorEmail||'',r.ts||''];}
+function exportarCSV(){
+  const aprob=REGISTROS.filter(r=>r.estado==='Aprobado');
+  if(!aprob.length){toast('No hay aprobados aún','err');return;}
+  const rows=[CABECERAS.join(';')];
+  aprob.forEach(r=>rows.push(filaArr(r).map(v=>typeof v==='number'?String(v).replace('.',','):'"'+String(v).replace(/"/g,'""')+'"').join(';')));
+  const csv='\ufeff'+rows.join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='ocupabilidad_aprobados_'+hoyISO()+'.csv';
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast('✓ CSV descargado');
+}
+function copiarTabla(){
+  const aprob=REGISTROS.filter(r=>r.estado==='Aprobado');
+  if(!aprob.length){toast('No hay aprobados','err');return;}
+  const rows=[CABECERAS.join('\t')];
+  aprob.forEach(r=>rows.push(filaArr(r).map(v=>typeof v==='number'?String(v).replace('.',','):v).join('\t')));
+  navigator.clipboard?.writeText(rows.join('\n')).then(()=>toast('✓ Copiado — pega en Excel'),()=>toast('No se pudo copiar','err'));
+}
+
+// =========================================================
+//  EVENTOS
+// =========================================================
+function enganchar(){
+  const sr=document.getElementById('selRuta');if(sr)sr.onchange=e=>{const r=rutaPorCodigo(e.target.value);F.codigo=e.target.value;F.placa=r?r.placa:'';F.cap=r?r.cap:0;F.cambioUnidad=false;F.placaReal='';F.conteo={};F.conteoAlm={};render();};
+  document.querySelectorAll('[data-cu]').forEach(b=>b.onclick=()=>{F.cambioUnidad=b.dataset.cu==='1';if(!F.cambioUnidad)F.placaReal='';render({noScroll:true});});
+  const spr=document.getElementById('selPlacaReal');if(spr)spr.onchange=e=>{F.placaReal=e.target.value;render({noScroll:true});};
+  document.querySelectorAll('[data-site]').forEach(b=>b.onclick=()=>{if(F.site!==b.dataset.site){F.site=b.dataset.site;F.codigo='';F.conteo={};F.conteoAlm={};}render();});
+  document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{if(F.direccion!==b.dataset.dir){F.direccion=b.dataset.dir;F.conteo={};}render({noScroll:true});});
+  document.querySelectorAll('[data-alm]').forEach(b=>b.onclick=()=>{F.almuerzo=b.dataset.alm==='1';render({noScroll:true});});
+  document.querySelectorAll('[data-vsup]').forEach(b=>b.onclick=()=>{VISTA_SUP=b.dataset.vsup;FILTRO_SUP='todos';render();});
+  document.querySelectorAll('[data-filtro]').forEach(b=>b.onclick=()=>{FILTRO_SUP=b.dataset.filtro;render();});
+  document.querySelectorAll('[data-f]').forEach(b=>{if(b.dataset.d===undefined)return;
+    b.onclick=()=>{const p=b.dataset.p.replace(/&quot;/g,'"'),d=+b.dataset.d;
+      F.conteo[p]=F.conteo[p]||{n:null};let v=(F.conteo[p].n===null?0:F.conteo[p].n)+d;if(v<0)v=0;F.conteo[p].n=v;
+      // actualizar solo el input de este paradero + gauge, sin redibujar todo
+      const inp=document.querySelector('[data-pn="'+b.dataset.p+'"]'); if(inp)inp.value=v;
+      const cont=b.closest('.par'); if(cont)cont.classList.add('filled');
+      refrescarGaugeRuta(); pintarAcciones();};});
+  document.querySelectorAll('[data-pn]').forEach(inp=>{
+    const p=inp.dataset.pn.replace(/&quot;/g,'"');
+    inp.oninput=()=>{inp.value=inp.value.replace(/[^0-9]/g,'');F.conteo[p]=F.conteo[p]||{n:null};
+      F.conteo[p].n=inp.value===''?null:parseInt(inp.value,10);
+      refrescarGaugeRuta();pintarAcciones();};});
+  // almuerzos por punto — actualiza in-situ, sin render (evita el salto de scroll)
+  document.querySelectorAll('[data-pa]').forEach(b=>{
+    b.onclick=()=>{const p=b.dataset.pa.replace(/&quot;/g,'"'),d=+b.dataset.da;
+      F.conteoAlm[p]=F.conteoAlm[p]||{n:null};let v=(F.conteoAlm[p].n===null?0:F.conteoAlm[p].n)+d;if(v<0)v=0;F.conteoAlm[p].n=v;
+      const inp=document.querySelector('[data-pan="'+b.dataset.pa+'"]'); if(inp)inp.value=v;
+      const cont=b.closest('.par'); if(cont)cont.classList.add('filled');
+      refrescarTotalAlm();};});
+  document.querySelectorAll('[data-pan]').forEach(inp=>{
+    const p=inp.dataset.pan.replace(/&quot;/g,'"');
+    inp.oninput=()=>{inp.value=inp.value.replace(/[^0-9]/g,'');F.conteoAlm[p]=F.conteoAlm[p]||{n:null};
+      F.conteoAlm[p].n=inp.value===''?null:parseInt(inp.value,10);refrescarTotalAlm();};});
+}
+
+// Actualiza solo el medidor de ocupabilidad de ruta, sin redibujar la pantalla
+function refrescarGaugeRuta(){
+  if(PANTALLA!==2)return;
+  const r=rutaPorCodigo(F.codigo);const g=document.getElementById('gaugeRuta');
+  if(g&&r)g.outerHTML=gaugeParaderos(r);
+}
+// Actualiza solo el total de almuerzos, sin redibujar la pantalla
+function refrescarTotalAlm(){
+  const el=document.getElementById('totAlmView');
+  if(el)el.textContent=totalAlmuerzos();
+}
+
+// =========================================================
+//  TOAST
+// =========================================================
+let toastT;
+function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type==='err'?' err':'');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.className='toast',2200);}
+
+// ---- Arranque ----
+iniciar();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
