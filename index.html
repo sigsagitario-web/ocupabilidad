@@ -253,6 +253,7 @@ let DATA={ sites:SITES, rutas:RUTAS, conductores:[] };
 let PROGRAMACION=null; // {fecha, items:[{codigo,placa,estado,turno,...}]}
 let ORIGEN='local';
 let F=nuevoRegistro(), PANTALLA=0, REGISTROS=[], FILTRO_SUP='todos', VISTA_SUP='validar';
+let MODO_ADMIN='supervisar'; // para rol admin: 'registrar' | 'supervisar'
 
 // ============ MSAL ============
 let _msalReady=false;
@@ -273,7 +274,13 @@ async function initMsal(){
     return true;
   }catch(e){ console.error('Error inicializando MSAL:',e); return false; }
 }
-// Garantiza que MSAL esté listo antes de cualquier operación
+async function esperarMsal(intentos){
+  for(let i=0;i<(intentos||50);i++){
+    if(window.msal && window.msal.PublicClientApplication) return true;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
 async function asegurarMsal(){
   if(_msalReady && msal) return true;
   const cargó = await esperarMsal();
@@ -312,7 +319,7 @@ async function trasLogin(silent){
   ROL=rolPorEmail(USUARIO.email);
   await resolverSitioYListas();
   await cargarDesdeSP();
-  if(ROL==='conductor') prepararConductor();
+  if(ROL==='conductor'||ROL==='admin') prepararConductor();
   if(ROL==='supervisor'||ROL==='admin') await cargarRegistrosSP();
   render();
 }
@@ -455,22 +462,14 @@ function getColor(p){if(p<0.4)return '#4a9fd4';if(p<0.75)return '#2fbf71';if(p<=
 // =========================================================
 //  ARRANQUE
 // =========================================================
-async function esperarMsal(intentos){
-  // espera hasta que la librería MSAL del CDN esté disponible (máx ~5s)
-  for(let i=0;i<(intentos||50);i++){
-    if(window.msal && window.msal.PublicClientApplication) return true;
-    await new Promise(r=>setTimeout(r,100));
-  }
-  return false;
-}
 async function iniciar(){
   if(MODO_DEMO){
     // demo sin login: datos locales, elige perfil manual
     DATA.rutas=RUTAS; DATA.conductores=CONDUCTORES_DB; ORIGEN='local';
     render(); return;
   }
-  render();                 // muestra pantalla de login mientras carga MSAL
-  await asegurarMsal();     // inicializa MSAL (muestra aviso si no carga)
+  render();               // muestra pantalla de login mientras carga MSAL
+  await asegurarMsal();    // inicializa MSAL (avisa si no carga)
   const ok=await trySilentLogin();  // intenta reanudar sesión recordada
   if(!ok) render();
 }
@@ -492,16 +491,30 @@ function render(opts){
   pill.className='modepill '+(ROL==='conductor'?'cond':'sup');
   pill.textContent = ROL==='admin'?'Administrador':(ROL==='supervisor'?'Supervisor':'Conductor');
 
-  if(ROL==='supervisor'||ROL==='admin'){abar.classList.add('hidden');pintarPasos(true);app.innerHTML=vistaSupervisor();enganchar();
-    scrollSiCambia('sup-'+VISTA_SUP,noScroll);return;}
-
+  const esAdmin = ROL==='admin';
+  // Supervisor puro, o admin en modo supervisar → paneles de supervisión
+  if(ROL==='supervisor' || (esAdmin && MODO_ADMIN==='supervisar')){
+    abar.classList.add('hidden');pintarPasos(true);
+    app.innerHTML=(esAdmin?barraModoAdmin():'')+vistaSupervisor();enganchar();
+    scrollSiCambia('sup-'+VISTA_SUP,noScroll);return;
+  }
+  // Conductor, o admin en modo registrar → flujo de registro
   abar.classList.remove('hidden');pintarPasos();
-  if(PANTALLA===0)app.innerHTML=vistaConductor();
-  else if(PANTALLA===1)app.innerHTML=vistaServicio();
-  else if(PANTALLA===2)app.innerHTML=vistaParaderos();
-  else app.innerHTML=vistaRevision();
+  let cuerpo='';
+  if(PANTALLA===0)cuerpo=vistaConductor();
+  else if(PANTALLA===1)cuerpo=vistaServicio();
+  else if(PANTALLA===2)cuerpo=vistaParaderos();
+  else cuerpo=vistaRevision();
+  app.innerHTML=(esAdmin?barraModoAdmin():'')+cuerpo;
   pintarAcciones();enganchar();
   scrollSiCambia('cond-'+PANTALLA,noScroll);
+}
+// Selector de modo para el administrador (registrar / supervisar)
+function barraModoAdmin(){
+  return `<div class="filtro" style="margin:2px 0 10px">
+    <button class="fbtn ${MODO_ADMIN==='registrar'?'on':''}" data-modoadmin="registrar" style="flex:1">🚍 Registrar</button>
+    <button class="fbtn ${MODO_ADMIN==='supervisar'?'on':''}" data-modoadmin="supervisar" style="flex:1">✓ Supervisar</button>
+  </div>`;
 }
 // Solo sube al tope cuando de verdad cambiamos de pantalla, no en cada redibujo
 function scrollSiCambia(vista,noScroll){
@@ -1018,6 +1031,14 @@ function enganchar(){
   document.querySelectorAll('[data-site]').forEach(b=>b.onclick=()=>{if(F.site!==b.dataset.site){F.site=b.dataset.site;F.codigo='';F.conteo={};F.conteoAlm={};}render();});
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{if(F.direccion!==b.dataset.dir){F.direccion=b.dataset.dir;F.conteo={};}render({noScroll:true});});
   document.querySelectorAll('[data-alm]').forEach(b=>b.onclick=()=>{F.almuerzo=b.dataset.alm==='1';render({noScroll:true});});
+  document.querySelectorAll('[data-modoadmin]').forEach(b=>b.onclick=()=>{
+    MODO_ADMIN=b.dataset.modoadmin;
+    if(MODO_ADMIN==='registrar'){ // asegurar identidad y empezar en paso 0
+      if(!F.conductor){ F=nuevoRegistro(); F.conductor=USUARIO.nombre; F.conductorEmail=USUARIO.email; }
+      PANTALLA=0;
+    }
+    render();
+  });
   document.querySelectorAll('[data-vsup]').forEach(b=>b.onclick=()=>{VISTA_SUP=b.dataset.vsup;FILTRO_SUP='todos';render();});
   document.querySelectorAll('[data-filtro]').forEach(b=>b.onclick=()=>{FILTRO_SUP=b.dataset.filtro;render();});
   document.querySelectorAll('[data-f]').forEach(b=>{if(b.dataset.d===undefined)return;
