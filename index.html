@@ -380,35 +380,60 @@ function campo(v){
   if(typeof v==='object') return v.Value||v.value||v.Label||v.LookupValue||v.Title||'';
   return v;
 }
+// Busca un campo probando varios nombres posibles (SharePoint renombra columnas al importar)
+function campoDe(fila,...nombres){
+  // 1) nombre exacto
+  for(const n of nombres){
+    if(fila[n]!==undefined && fila[n]!==null && fila[n]!=='') return campo(fila[n]);
+  }
+  // 2) tolerante: ignora mayúsculas, espacios, guiones bajos y prefijos OData
+  const norm=s=>String(s).toLowerCase().replace(/^odata_+/,'').replace(/[\s_]/g,'');
+  const objetivo=nombres.map(norm);
+  for(const k of Object.keys(fila)){
+    if(objetivo.includes(norm(k)) && fila[k]!==undefined && fila[k]!==null && fila[k]!=='') return campo(fila[k]);
+  }
+  return '';
+}
 async function cargarDesdeSP(){
   try{
     const [cond,rutas,paras]=await Promise.all([listItems('conductores'),listItems('rutas'),listItems('paraderos')]);
-    const activo=x=>{const a=String(campo(x.Activo)).toLowerCase(); return a!=='no'&&a!=='false'&&a!=='0';};
+    const activo=x=>{const a=String(campoDe(x,'Activo')).toLowerCase(); return a!=='no'&&a!=='false'&&a!=='0';};
     const parByRuta={};
-    paras.filter(activo).sort((a,b)=>(+campo(a.Orden)||0)-(+campo(b.Orden)||0))
-      .forEach(p=>{const c=String(campo(p.CodigoRuta));(parByRuta[c]=parByRuta[c]||[]).push(campo(p.Paradero));});
+    paras.filter(activo).sort((a,b)=>(+campoDe(a,'Orden','field_2')||0)-(+campoDe(b,'Orden','field_2')||0))
+      .forEach(p=>{const c=String(campoDe(p,'CodigoRuta','field_1'));(parByRuta[c]=parByRuta[c]||[]).push(campoDe(p,'Paradero','field_3'));});
     DATA.rutas=rutas.filter(activo).map(r=>({
-      codigo:String(campo(r.Title)),site:String(campo(r.Site)).toUpperCase().replace(/\s+/g,''),
-      placa:campo(r.Placa),unidad:campo(r.Unidad),cap:+campo(r.Capacidad)||0,
-      turno:String(campo(r.Turno)).toUpperCase()||'DIA',
-      ruta:campo(r.RutaDescripcion),paraderos:parByRuta[String(campo(r.Title))]||[]}));
-    DATA.conductores=cond.filter(activo).map(c=>({nombre:campo(c.Title),email:String(campo(c.Email)).toLowerCase()}));
+      codigo:String(campoDe(r,'Title')),
+      site:String(campoDe(r,'Site','field_1')).toUpperCase().replace(/\s+/g,''),
+      placa:campoDe(r,'Placa','field_3'),unidad:campoDe(r,'Unidad','field_4'),
+      cap:+campoDe(r,'Capacidad','field_5')||0,
+      turno:String(campoDe(r,'Turno','field_6')).toUpperCase()||'DIA',
+      ruta:campoDe(r,'RutaDescripcion','field_7'),
+      paraderos:parByRuta[String(campoDe(r,'Title'))]||[]}));
+    DATA.conductores=cond.filter(activo).map(c=>({nombre:campoDe(c,'Title'),email:String(campoDe(c,'Email','field_1')).toLowerCase()}));
     console.log('Rutas cargadas:',DATA.rutas.length,'| ejemplo site:',DATA.rutas[0]&&DATA.rutas[0].site);
+    if(rutas[0]) console.log('CAMPOS REALES de la lista Rutas:',JSON.stringify(rutas[0]));
     // puntos de almuerzo (lista opcional)
     if(LIST_IDS.puntosalmuerzo){
       try{ const pa=await listItems('puntosalmuerzo');
-        const activos=pa.filter(activo).sort((a,b)=>(+campo(a.Orden)||0)-(+campo(b.Orden)||0)).map(x=>campo(x.Title));
+        const activos=pa.filter(activo).sort((a,b)=>(+campoDe(a,'Orden','field_1')||0)-(+campoDe(b,'Orden','field_1')||0)).map(x=>campoDe(x,'Title'));
         if(activos.length) PUNTOS_ALMUERZO=activos;
       }catch(e){ console.warn('sin lista PuntosAlmuerzo, uso fijos'); }
     }
     // programación diaria del día de hoy (lista opcional)
     if(LIST_IDS.programacion){
       try{ const pr=await listItems('programacion'); const hoy=hoyISO();
-        const items=pr.filter(x=>String(campo(x.Fecha)||'').slice(0,10)===hoy).map(x=>({
-          codigo:String(campo(x.CodigoRuta)),placa:campo(x.Placa),estado:String(campo(x.EstadoUnidad)).toUpperCase(),
-          campamento:campo(x.Campamento),ruta:campo(x.RutaDescripcion),conductor:campo(x.Conductor),turno:String(campo(x.Turno)||'DIA').toUpperCase()}));
-        if(items.length) PROGRAMACION={fecha:hoy,items};
-        console.log('Programación de hoy:',items.length,'rutas');
+        const mapProg=x=>({fecha:String(campoDe(x,'Fecha','field_1')||'').slice(0,10),
+          codigo:String(campoDe(x,'CodigoRuta','field_2')),placa:campoDe(x,'Placa','field_3'),estado:String(campoDe(x,'EstadoUnidad','field_4')).toUpperCase(),
+          campamento:campoDe(x,'Campamento','field_5'),ruta:campoDe(x,'RutaDescripcion','field_6'),conductor:campoDe(x,'Conductor','field_7'),turno:String(campoDe(x,'Turno','field_8')||'DIA').toUpperCase()});
+        const todas=pr.map(mapProg).filter(p=>p.fecha);
+        let items=todas.filter(p=>p.fecha===hoy);
+        let fechaUsada=hoy;
+        if(!items.length && todas.length){
+          fechaUsada=todas.map(p=>p.fecha).sort().reverse()[0];
+          items=todas.filter(p=>p.fecha===fechaUsada);
+        }
+        if(items.length) PROGRAMACION={fecha:fechaUsada,items};
+        console.log('Programación cargada:',items.length,'rutas (fecha',fechaUsada+')');
       }catch(e){ console.warn('sin lista ProgramacionDiaria'); }
     }
     ORIGEN='sharepoint';
@@ -420,16 +445,19 @@ async function cargarDesdeSP(){
 async function cargarRegistrosSP(){
   try{
     const regs=await listItems('registros');
-    REGISTROS=regs.filter(r=>r.Title&&r.Title.indexOf('EJEMPLO')<0).map(mapRegSP);
+    REGISTROS=regs.filter(r=>{const t=String(campoDe(r,'Title'));return t&&t.indexOf('EJEMPLO')<0;}).map(mapRegSP);
   }catch(e){ console.warn('No pude leer registros:',e.message); }
 }
 function mapRegSP(r){
-  return {id:campo(r.Title),itemId:r._id,fecha:String(campo(r.Fecha)||'').slice(0,10)||hoyISO(),conductor:campo(r.Conductor),
-    placa:campo(r.Placa),site:String(campo(r.Site)).toUpperCase().replace(/\s+/g,''),codigo:String(campo(r.CodigoRuta)),ruta:campo(r.RutaDescripcion),cap:+campo(r.Capacidad)||0,
-    direccion:String(campo(r.Direccion)).toUpperCase(),total:+campo(r.TotalPersonal)||0,ocup:+campo(r.Ocupabilidad)||0,
-    servicios:+campo(r.NumServicios)||1,turno:campo(r.Turno),almuerzo:campo(r.Almuerzo),estado:campo(r.Estado)||'Pendiente',
-    placaTitular:campo(r.PlacaTitular),cambioUnidad:String(campo(r.CambioUnidad))==='Sí',
-    conductorEmail:String(campo(r.ConductorEmail)).toLowerCase(),detalle:[],ts:r.Created||''};
+  return {id:campoDe(r,'Title'),itemId:r._id,fecha:String(campoDe(r,'Fecha','field_1')||'').slice(0,10)||hoyISO(),
+    conductor:campoDe(r,'Conductor','field_2'),
+    placa:campoDe(r,'Placa','field_4'),site:String(campoDe(r,'Site','field_7')).toUpperCase().replace(/\s+/g,''),
+    codigo:String(campoDe(r,'CodigoRuta','field_8')),ruta:campoDe(r,'RutaDescripcion','field_9'),cap:+campoDe(r,'Capacidad','field_10')||0,
+    direccion:String(campoDe(r,'Direccion','field_11')).toUpperCase(),total:+campoDe(r,'TotalPersonal','field_12')||0,ocup:+campoDe(r,'Ocupabilidad','field_13')||0,
+    servicios:+campoDe(r,'NumServicios','field_14')||1,turno:campoDe(r,'Turno','field_15'),almuerzo:campoDe(r,'Almuerzo','field_16'),
+    estado:campoDe(r,'Estado','field_18')||'Pendiente',
+    placaTitular:campoDe(r,'PlacaTitular','field_5'),cambioUnidad:String(campoDe(r,'CambioUnidad','field_6'))==='Sí',
+    conductorEmail:String(campoDe(r,'ConductorEmail','field_3')).toLowerCase(),detalle:[],ts:r.Created||''};
 }
 
 // Identidad automática: buscar al conductor por su correo
@@ -820,21 +848,21 @@ function construirRegistro(){
 }
 async function spCrearRegistro(reg){
   const res=await crearItem('registros',{
-    Title:reg.id,Fecha:reg.fecha,Conductor:reg.conductor,ConductorEmail:reg.conductorEmail,Placa:reg.placa,
-    PlacaTitular:reg.placaTitular,CambioUnidad:reg.cambioUnidad?'Sí':'No',
-    Site:reg.site,CodigoRuta:reg.codigo,RutaDescripcion:reg.ruta,Capacidad:reg.cap,Direccion:reg.direccion,
-    TotalPersonal:reg.total,Ocupabilidad:reg.ocup,NumServicios:reg.servicios,
-    Turno:reg.turno,Almuerzo:reg.almuerzo,TotalAlmuerzos:reg.totAlmuerzos||0,Estado:'Pendiente'});
+    Title:reg.id, field_1:reg.fecha, field_2:reg.conductor, field_3:reg.conductorEmail, field_4:reg.placa,
+    field_5:reg.placaTitular, field_6:(reg.cambioUnidad?'Sí':'No'),
+    field_7:reg.site, field_8:reg.codigo, field_9:reg.ruta, field_10:reg.cap, field_11:reg.direccion,
+    field_12:reg.total, field_13:reg.ocup, field_14:reg.servicios,
+    field_15:reg.turno, field_16:reg.almuerzo, field_17:(reg.totAlmuerzos||0), field_18:'Pendiente'});
   reg.itemId=res&&res.id;
   if(LIST_IDS.detalle){
     for(const d of reg.detalle){
-      try{ await crearItem('detalle',{Title:reg.id+'-'+d.orden,RegistroID:reg.id,CodigoRuta:reg.codigo,
-        Paradero:d.paradero,Orden:d.orden,Personal:d.n,Direccion:reg.direccion,Tipo:'RUTA'}); }
+      try{ await crearItem('detalle',{Title:reg.id+'-'+d.orden, field_1:reg.id, field_2:reg.codigo,
+        field_3:d.paradero, field_4:d.orden, field_5:d.n, field_6:reg.direccion, field_7:'RUTA'}); }
       catch(e){ console.warn('detalle falló',e.message); }
     }
     for(const a of (reg.almDetalle||[])){
-      try{ await crearItem('detalle',{Title:reg.id+'-ALM-'+a.orden,RegistroID:reg.id,CodigoRuta:reg.codigo,
-        Paradero:a.punto,Orden:a.orden,Personal:a.n,Direccion:reg.direccion,Tipo:'ALMUERZO'}); }
+      try{ await crearItem('detalle',{Title:reg.id+'-ALM-'+a.orden, field_1:reg.id, field_2:reg.codigo,
+        field_3:a.punto, field_4:a.orden, field_5:a.n, field_6:reg.direccion, field_7:'ALMUERZO'}); }
       catch(e){ console.warn('detalle almuerzo falló',e.message); }
     }
   }
@@ -971,7 +999,7 @@ function regById(id){return REGISTROS.find(r=>r.id===id);}
 async function cambiarEstado(id,estado){
   const r=regById(id);if(!r)return;r.estado=estado;
   if(!MODO_DEMO && r.itemId && LIST_IDS.registros){
-    try{ await actualizarItem('registros',r.itemId,{Estado:estado,RevisadoPor:USUARIO.email,FechaRevision:new Date().toISOString()}); }
+    try{ await actualizarItem('registros',r.itemId,{field_18:estado,field_19:USUARIO.email,field_20:new Date().toISOString()}); }
     catch(e){ console.warn('No pude actualizar estado:',e.message); }
   }
   toast(estado==='Aprobado'?'✓ Aprobado':'Reabierto');render();
@@ -1006,7 +1034,7 @@ async function guardarEdicion(id){
   document.querySelectorAll(`[data-edit="${id}"]`).forEach(inp=>{const i=+inp.dataset.i,f=inp.dataset.f,v=+inp.value||0;if(pars[i])pars[i][f]=v;});
   r.total=pars.reduce((a,d)=>a+(+d.n||0),0);r.ocup=r.cap?r.total/r.cap:0;r.detalle=pars;
   if(!MODO_DEMO && r.itemId && LIST_IDS.registros){
-    try{ await actualizarItem('registros',r.itemId,{TotalPersonal:r.total,Ocupabilidad:r.ocup}); }
+    try{ await actualizarItem('registros',r.itemId,{field_12:r.total,field_13:r.ocup}); }
     catch(e){ console.warn('No pude actualizar:',e.message); }
   }
   cerrarModal();toast('✓ Cambios guardados');render();
