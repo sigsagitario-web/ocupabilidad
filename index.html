@@ -233,9 +233,9 @@ const CONFIG = {
   // Sitio y listas de SharePoint
   spHost:    "transportessagitariosrl050.sharepoint.com",
   spPath:    "/sites/Sitiodeapps",
-  listas: { conductores:"Conductores", rutas:"Rutas", paraderos:"Paraderos",
-            registros:"Registros", detalle:"DetalleParaderos",
-            puntosalmuerzo:"PuntosAlmuerzo", programacion:"ProgramacionDiaria" },
+  listas: { conductores:"SP_Lista1_Conductores", rutas:"SP_Lista2_Rutas", paraderos:"SP_Lista3_Paraderos",
+            registros:"SP_Lista4_Registros", detalle:"SP_Lista5_DetalleParaderos",
+            puntosalmuerzo:"SP_Lista6_PuntosAlmuerzo", programacion:"SP_Lista7_ProgramacionDiaria" },
   // Correos de rol
   adminEmail:      "davidizquierdoteran@transportessagitariosrl050.onmicrosoft.com",
   supervisorEmail: "operaciones@transportessagitariosrl050.onmicrosoft.com",
@@ -253,25 +253,21 @@ let DATA={ sites:SITES, rutas:RUTAS, conductores:[] };
 let PROGRAMACION=null; // {fecha, items:[{codigo,placa,estado,turno,...}]}
 let ORIGEN='local';
 let F=nuevoRegistro(), PANTALLA=0, REGISTROS=[], FILTRO_SUP='todos', VISTA_SUP='validar';
-let MODO_ADMIN='supervisar'; // para rol admin: 'registrar' | 'supervisar'
+let MODO_ADMIN='supervisar'; // rol admin: 'registrar' | 'supervisar'
 
 // ============ MSAL ============
 let _msalReady=false;
 async function initMsal(){
-  const lib = window.msal; // la librería MSAL se expone en window.msal
-  if(!lib || !lib.PublicClientApplication){
-    console.error('MSAL no se cargó (revisa la conexión o el bloqueo de scripts).');
-    return false;
-  }
+  const lib = window.msal;
+  if(!lib || !lib.PublicClientApplication){ console.error('MSAL no se cargó.'); return false; }
   try{
     msal = new lib.PublicClientApplication({
       auth:{ clientId:CONFIG.clientId, authority:`https://login.microsoftonline.com/${CONFIG.tenantId}`,
              redirectUri: location.origin+location.pathname },
-      cache:{ cacheLocation:"localStorage", storeAuthStateInCookie:false } // recuerda sesión en el navegador
+      cache:{ cacheLocation:"localStorage", storeAuthStateInCookie:false }
     });
-    await msal.initialize();   // MSAL v3 requiere initialize() una vez
-    _msalReady=true;
-    return true;
+    await msal.initialize();
+    _msalReady=true; return true;
   }catch(e){ console.error('Error inicializando MSAL:',e); return false; }
 }
 async function esperarMsal(intentos){
@@ -348,12 +344,24 @@ async function graph(url,method,body){
 async function resolverSitioYListas(){
   const site=await graph(`/sites/${CONFIG.spHost}:${CONFIG.spPath}`);
   SITE_ID=site.id;
-  const lists=await graph(`/sites/${SITE_ID}/lists?$select=id,displayName`);
-  (lists.value||[]).forEach(l=>{
-    for(const [k,name] of Object.entries(CONFIG.listas)) if(l.displayName===name) LIST_IDS[k]=l.id;
-  });
+  const lists=await graph(`/sites/${SITE_ID}/lists?$select=id,displayName,name`);
+  const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,'').replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i').replace(/[óòö]/g,'o').replace(/[úùü]/g,'u');
+  const disponibles=(lists.value||[]);
+  LIST_IDS={};
+  for(const [k,name] of Object.entries(CONFIG.listas)){
+    // 1) coincidencia EXACTA por nombre visible o interno (evita confundir con listas parecidas)
+    let hit=disponibles.find(l=> l.displayName===name || l.name===name );
+    // 2) respaldo: coincidencia tolerante (ignora mayúsculas, espacios, tildes)
+    if(!hit){ const objetivo=norm(name); hit=disponibles.find(l=> norm(l.displayName)===objetivo || norm(l.name)===objetivo ); }
+    if(hit) LIST_IDS[k]=hit.id;
+  }
+  console.log('Listas en el sitio:', disponibles.map(l=>l.displayName));
+  const faltan=Object.keys(CONFIG.listas).filter(k=>!LIST_IDS[k]).map(k=>CONFIG.listas[k]);
+  if(faltan.length) console.warn('⚠ No encontré estas listas (revisa el nombre en SharePoint):', faltan);
+  else console.log('✓ Todas las listas encontradas y conectadas');
 }
 async function listItems(key){
+  if(!LIST_IDS[key]){ console.warn('Lista no conectada:',CONFIG.listas[key]); return []; }
   const r=await graph(`/sites/${SITE_ID}/lists/${LIST_IDS[key]}/items?$expand=fields&$top=2000`);
   return (r.value||[]).map(it=>({_id:it.id,...it.fields}));
 }
@@ -469,7 +477,7 @@ async function iniciar(){
     render(); return;
   }
   render();               // muestra pantalla de login mientras carga MSAL
-  await asegurarMsal();    // inicializa MSAL (avisa si no carga)
+  await asegurarMsal();
   const ok=await trySilentLogin();  // intenta reanudar sesión recordada
   if(!ok) render();
 }
@@ -492,13 +500,11 @@ function render(opts){
   pill.textContent = ROL==='admin'?'Administrador':(ROL==='supervisor'?'Supervisor':'Conductor');
 
   const esAdmin = ROL==='admin';
-  // Supervisor puro, o admin en modo supervisar → paneles de supervisión
   if(ROL==='supervisor' || (esAdmin && MODO_ADMIN==='supervisar')){
     abar.classList.add('hidden');pintarPasos(true);
     app.innerHTML=(esAdmin?barraModoAdmin():'')+vistaSupervisor();enganchar();
     scrollSiCambia('sup-'+VISTA_SUP,noScroll);return;
   }
-  // Conductor, o admin en modo registrar → flujo de registro
   abar.classList.remove('hidden');pintarPasos();
   let cuerpo='';
   if(PANTALLA===0)cuerpo=vistaConductor();
@@ -509,7 +515,6 @@ function render(opts){
   pintarAcciones();enganchar();
   scrollSiCambia('cond-'+PANTALLA,noScroll);
 }
-// Selector de modo para el administrador (registrar / supervisar)
 function barraModoAdmin(){
   return `<div class="filtro" style="margin:2px 0 10px">
     <button class="fbtn ${MODO_ADMIN==='registrar'?'on':''}" data-modoadmin="registrar" style="flex:1">🚍 Registrar</button>
@@ -1033,10 +1038,7 @@ function enganchar(){
   document.querySelectorAll('[data-alm]').forEach(b=>b.onclick=()=>{F.almuerzo=b.dataset.alm==='1';render({noScroll:true});});
   document.querySelectorAll('[data-modoadmin]').forEach(b=>b.onclick=()=>{
     MODO_ADMIN=b.dataset.modoadmin;
-    if(MODO_ADMIN==='registrar'){ // asegurar identidad y empezar en paso 0
-      if(!F.conductor){ F=nuevoRegistro(); F.conductor=USUARIO.nombre; F.conductorEmail=USUARIO.email; }
-      PANTALLA=0;
-    }
+    if(MODO_ADMIN==='registrar'){ if(!F.conductor){F=nuevoRegistro();F.conductor=USUARIO.nombre;F.conductorEmail=USUARIO.email;} PANTALLA=0; }
     render();
   });
   document.querySelectorAll('[data-vsup]').forEach(b=>b.onclick=()=>{VISTA_SUP=b.dataset.vsup;FILTRO_SUP='todos';render();});
