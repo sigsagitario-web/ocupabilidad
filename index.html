@@ -373,30 +373,42 @@ async function actualizarItem(key,itemId,fields){
 }
 
 // ============ CARGA DE DATOS ============
+// Extrae el valor de una columna sea texto, Opción (choice), número o lookup
+function campo(v){
+  if(v===null||v===undefined) return '';
+  if(Array.isArray(v)) return v.map(campo).join(', ');           // multi-choice
+  if(typeof v==='object') return v.Value||v.value||v.Label||v.LookupValue||v.Title||'';
+  return v;
+}
 async function cargarDesdeSP(){
   try{
     const [cond,rutas,paras]=await Promise.all([listItems('conductores'),listItems('rutas'),listItems('paraderos')]);
+    const activo=x=>{const a=String(campo(x.Activo)).toLowerCase(); return a!=='no'&&a!=='false'&&a!=='0';};
     const parByRuta={};
-    paras.filter(p=>String(p.Activo)!=='No').sort((a,b)=>(+a.Orden||0)-(+b.Orden||0))
-      .forEach(p=>{(parByRuta[String(p.CodigoRuta)]=parByRuta[String(p.CodigoRuta)]||[]).push(p.Paradero);});
-    DATA.rutas=rutas.filter(r=>String(r.Activo)!=='No').map(r=>({
-      codigo:String(r.Title),site:r.Site,placa:r.Placa,unidad:r.Unidad||'',cap:+r.Capacidad||0,
-      ruta:r.RutaDescripcion||'',paraderos:parByRuta[String(r.Title)]||[]}));
-    DATA.conductores=cond.filter(c=>String(c.Activo)!=='No').map(c=>({nombre:c.Title,email:(c.Email||'').toLowerCase()}));
+    paras.filter(activo).sort((a,b)=>(+campo(a.Orden)||0)-(+campo(b.Orden)||0))
+      .forEach(p=>{const c=String(campo(p.CodigoRuta));(parByRuta[c]=parByRuta[c]||[]).push(campo(p.Paradero));});
+    DATA.rutas=rutas.filter(activo).map(r=>({
+      codigo:String(campo(r.Title)),site:String(campo(r.Site)).toUpperCase().replace(/\s+/g,''),
+      placa:campo(r.Placa),unidad:campo(r.Unidad),cap:+campo(r.Capacidad)||0,
+      turno:String(campo(r.Turno)).toUpperCase()||'DIA',
+      ruta:campo(r.RutaDescripcion),paraderos:parByRuta[String(campo(r.Title))]||[]}));
+    DATA.conductores=cond.filter(activo).map(c=>({nombre:campo(c.Title),email:String(campo(c.Email)).toLowerCase()}));
+    console.log('Rutas cargadas:',DATA.rutas.length,'| ejemplo site:',DATA.rutas[0]&&DATA.rutas[0].site);
     // puntos de almuerzo (lista opcional)
     if(LIST_IDS.puntosalmuerzo){
       try{ const pa=await listItems('puntosalmuerzo');
-        const activos=pa.filter(x=>String(x.Activo)!=='No').sort((a,b)=>(+a.Orden||0)-(+b.Orden||0)).map(x=>x.Title);
+        const activos=pa.filter(activo).sort((a,b)=>(+campo(a.Orden)||0)-(+campo(b.Orden)||0)).map(x=>campo(x.Title));
         if(activos.length) PUNTOS_ALMUERZO=activos;
       }catch(e){ console.warn('sin lista PuntosAlmuerzo, uso fijos'); }
     }
     // programación diaria del día de hoy (lista opcional)
     if(LIST_IDS.programacion){
       try{ const pr=await listItems('programacion'); const hoy=hoyISO();
-        const items=pr.filter(x=>String(x.Fecha||'').slice(0,10)===hoy).map(x=>({
-          codigo:String(x.CodigoRuta),placa:x.Placa||'',estado:String(x.EstadoUnidad||'').toUpperCase(),
-          campamento:x.Campamento||'',ruta:x.RutaDescripcion||'',conductor:x.Conductor||'',turno:String(x.Turno||'DIA').toUpperCase()}));
+        const items=pr.filter(x=>String(campo(x.Fecha)||'').slice(0,10)===hoy).map(x=>({
+          codigo:String(campo(x.CodigoRuta)),placa:campo(x.Placa),estado:String(campo(x.EstadoUnidad)).toUpperCase(),
+          campamento:campo(x.Campamento),ruta:campo(x.RutaDescripcion),conductor:campo(x.Conductor),turno:String(campo(x.Turno)||'DIA').toUpperCase()}));
         if(items.length) PROGRAMACION={fecha:hoy,items};
+        console.log('Programación de hoy:',items.length,'rutas');
       }catch(e){ console.warn('sin lista ProgramacionDiaria'); }
     }
     ORIGEN='sharepoint';
@@ -412,11 +424,12 @@ async function cargarRegistrosSP(){
   }catch(e){ console.warn('No pude leer registros:',e.message); }
 }
 function mapRegSP(r){
-  return {id:r.Title,itemId:r._id,fecha:(r.Fecha||'').slice(0,10)||hoyISO(),conductor:r.Conductor,
-    placa:r.Placa,site:r.Site,codigo:String(r.CodigoRuta),ruta:r.RutaDescripcion,cap:+r.Capacidad||0,
-    direccion:r.Direccion,total:+r.TotalPersonal||0,ocup:+r.Ocupabilidad||0,
-    servicios:+r.NumServicios||1,turno:r.Turno,almuerzo:r.Almuerzo,estado:r.Estado||'Pendiente',
-    conductorEmail:(r.ConductorEmail||'').toLowerCase(),detalle:[],ts:r.Created||''};
+  return {id:campo(r.Title),itemId:r._id,fecha:String(campo(r.Fecha)||'').slice(0,10)||hoyISO(),conductor:campo(r.Conductor),
+    placa:campo(r.Placa),site:String(campo(r.Site)).toUpperCase().replace(/\s+/g,''),codigo:String(campo(r.CodigoRuta)),ruta:campo(r.RutaDescripcion),cap:+campo(r.Capacidad)||0,
+    direccion:String(campo(r.Direccion)).toUpperCase(),total:+campo(r.TotalPersonal)||0,ocup:+campo(r.Ocupabilidad)||0,
+    servicios:+campo(r.NumServicios)||1,turno:campo(r.Turno),almuerzo:campo(r.Almuerzo),estado:campo(r.Estado)||'Pendiente',
+    placaTitular:campo(r.PlacaTitular),cambioUnidad:String(campo(r.CambioUnidad))==='Sí',
+    conductorEmail:String(campo(r.ConductorEmail)).toLowerCase(),detalle:[],ts:r.Created||''};
 }
 
 // Identidad automática: buscar al conductor por su correo
