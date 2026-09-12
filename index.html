@@ -399,8 +399,15 @@ async function cargarDesdeSP(){
     const [cond,rutas,paras]=await Promise.all([listItems('conductores'),listItems('rutas'),listItems('paraderos')]);
     const activo=x=>{const a=String(campoDe(x,'Activo')).toLowerCase(); return a!=='no'&&a!=='false'&&a!=='0';};
     const parByRuta={};
-    paras.filter(activo).sort((a,b)=>(+campoDe(a,'Orden','field_2')||0)-(+campoDe(b,'Orden','field_2')||0))
-      .forEach(p=>{const c=String(campoDe(p,'CodigoRuta','field_1'));(parByRuta[c]=parByRuta[c]||[]).push(campoDe(p,'Paradero','field_3'));});
+    paras.filter(activo).forEach(p=>{
+      const c=String(campoDe(p,'CodigoRuta','field_1'));
+      const dir=String(campoDe(p,'Direccion','field_5')).toUpperCase().replace(/\s+/g,'');
+      const orden=+campoDe(p,'Orden','field_2')||0;
+      const nombre=campoDe(p,'Paradero','field_3');
+      (parByRuta[c]=parByRuta[c]||[]).push({nombre,dir:dir||'SUBIDA',orden});
+    });
+    // ordenar cada ruta por orden
+    for(const c in parByRuta) parByRuta[c].sort((a,b)=>a.orden-b.orden);
     DATA.rutas=rutas.filter(activo).map(r=>({
       codigo:String(campoDe(r,'Title')),
       site:String(campoDe(r,'Site','field_1')).toUpperCase().replace(/\s+/g,''),
@@ -504,6 +511,14 @@ function numSemana(iso){const [y,m,d]=iso.split('-').map(Number);const on=new Da
   return Math.ceil((((on-ys)/86400000)+1)/7);}
 function rutaPorCodigo(cod){return DATA.rutas.find(r=>r.codigo===cod);}
 function rutasDeSite(site){return DATA.rutas.filter(r=>r.site===site).sort((a,b)=>(+a.codigo||9999)-(+b.codigo||9999));}
+// Paraderos de una ruta según la dirección (SUBIDA/BAJADA), ya ordenados
+function paraderosDir(r,dir){
+  const lista=(r&&r.paraderos)||[];
+  // compatibilidad: si son strings (formato viejo), devolverlos tal cual
+  if(lista.length && typeof lista[0]==='string') return lista;
+  const filtrados=lista.filter(p=>p.dir===dir).sort((a,b)=>a.orden-b.orden).map(p=>p.nombre);
+  return filtrados;
+}
 function siteLabel(id){const s=SITES.find(x=>x.id===id);return s?s.lab:id;}
 function esc(s){return String(s).replace(/"/g,'&quot;');}
 function getColor(p){if(p<0.4)return '#4a9fd4';if(p<0.75)return '#2fbf71';if(p<=1.0)return '#f2a900';return '#e5484d';}
@@ -659,7 +674,7 @@ function vistaServicio(){
   if(F.codigo){const r=rutaPorCodigo(F.codigo);const tn=r.turno==='NOCHE';
     info=`<div class="gauge" style="margin-top:12px"><div class="gtags" style="margin:0">
       <div class="gtag">Placa <b>${r.placa||'—'}</b></div><div class="gtag">Unidad <b>${r.unidad||'—'}</b></div>
-      <div class="gtag">Capacidad <b>${r.cap}</b></div><div class="gtag">Paraderos <b>${r.paraderos.length}</b></div>
+      <div class="gtag">Capacidad <b>${r.cap}</b></div><div class="gtag">Paraderos <b>${(r.paraderos&&r.paraderos.length)||0}</b></div>
       <div class="gtag">Turno <b style="color:${tn?'var(--violet)':'var(--amber)'}">${turnoLabel(r.turno)}</b></div></div></div>`;}
   return `
   <section class="card">
@@ -713,7 +728,8 @@ function bloqueCambioUnidad(){
 
 function vistaParaderos(){
   const r=rutaPorCodigo(F.codigo);
-  const pars=r.paraderos.length?r.paraderos:['Origen','Destino'];
+  let pars=paraderosDir(r,F.direccion);
+  if(!pars.length) pars=['Origen','Destino']; // respaldo si esa ruta no tiene paraderos de esa dirección
   const dir=F.direccion==='SUBIDA'?'subida':'bajada';
   const parHtml=pars.map((p,i)=>{const c=F.conteo[p]||{n:null};const filled=(c.n!==null);
     return `<div class="par ${filled?'filled':''}">
@@ -762,6 +778,12 @@ function bloqueAlmuerzos(){
 }
 function totalAlmuerzos(){let t=0;Object.values(F.conteoAlm).forEach(c=>{t+=(+c.n||0);});return t;}
 function totales(){let tot=0;Object.values(F.conteo).forEach(c=>{tot+=(+c.n||0);});return {tot};}
+// Máximo que se puede poner en un paradero sin que el TOTAL supere la capacidad (100%)
+function maxEnParadero(p){
+  const cap=capEfectiva()||0; if(!cap) return 9999;
+  let otros=0; for(const k in F.conteo){ if(k!==p) otros+=(+F.conteo[k].n||0); }
+  return Math.max(0, cap-otros);
+}
 function ocupabilidad(r){const cap=capEfectiva()||(r?r.cap:0);if(!cap)return 0;return totales().tot/cap;}
 function gaugeParaderos(r){
   const {tot}=totales();const any=Object.keys(F.conteo).length>0;
@@ -789,7 +811,8 @@ function vistaRevision(){
     ['Turno',turnoLabel(r.turno)+' (según ruta)'],['Total personal',tot+' pers.'],
     ['Almuerzos',F.almuerzo?('Aplica · '+totalAlmuerzos()+' almuerzos'):'No aplica']];
   const rowsH=rows.map(([k,v])=>`<div class="rrow"><span class="rk">${k}</span><span class="rv">${v}</span></div>`).join('');
-  const det=(r.paraderos.length?r.paraderos:['Origen','Destino']).map((p,i)=>{const c=F.conteo[p]||{n:0};
+  const detPars=(function(){let p=paraderosDir(r,F.direccion);return p.length?p:['Origen','Destino'];})();
+  const det=detPars.map((p,i)=>{const c=F.conteo[p]||{n:0};
     return `<div class="rrow"><span class="rk">${i+1}. ${p}</span><span class="rv">${c.n||0} pers.</span></div>`;}).join('');
   return `<section class="card">
     <div class="card-h"><span class="card-n">4</span><h2>Revisa y envía</h2></div>
@@ -818,7 +841,11 @@ function atras(){if(PANTALLA>0){PANTALLA--;render();}}
 // =========================================================
 //  ENVÍO (conductor)
 // =========================================================
+let _enviando=false;
 async function enviar(){
+  if(_enviando) return;            // evita doble envío por toques repetidos
+  _enviando=true;
+  const btn=document.querySelector('.btn-amber'); if(btn){btn.disabled=true;btn.textContent='Enviando…';}
   const reg=construirRegistro();
   let okSP=false;
   if(!MODO_DEMO && SITE_ID && LIST_IDS.registros){
@@ -828,13 +855,15 @@ async function enviar(){
   REGISTROS.push(reg);
   if(okSP) toast('✓ Enviado a SharePoint');
   else if(MODO_DEMO) toast('✓ Registro guardado (demo)');
-  const site=F.site;
-  F=nuevoRegistro();F.conductor=USUARIO.nombre;F.conductorEmail=USUARIO.email;F.site=site;
-  PANTALLA=1;render();
+  // registro nuevo desde cero: se conserva solo la identidad del conductor
+  F=nuevoRegistro();F.conductor=USUARIO.nombre;F.conductorEmail=USUARIO.email;
+  PANTALLA=0;
+  _enviando=false;
+  render();
 }
 function construirRegistro(){
   const r=rutaPorCodigo(F.codigo);const {tot}=totales();const oc=ocupabilidad(r);
-  const pars=r.paraderos.length?r.paraderos:['Origen','Destino'];
+  let pars=paraderosDir(r,F.direccion); if(!pars.length) pars=['Origen','Destino'];
   const detalle=pars.map((p,i)=>{const c=F.conteo[p]||{n:0};return {paradero:p,orden:i+1,n:+c.n||0};});
   const placaUsada=placaEfectiva(); const capUsada=capEfectiva();
   const almDetalle = F.almuerzo ? PUNTOS_ALMUERZO.map((p,i)=>({punto:p,orden:i+1,n:+(F.conteoAlm[p]&&F.conteoAlm[p].n)||0})).filter(x=>x.n>0) : [];
@@ -1086,15 +1115,18 @@ function enganchar(){
   document.querySelectorAll('[data-filtro]').forEach(b=>b.onclick=()=>{FILTRO_SUP=b.dataset.filtro;render();});
   document.querySelectorAll('[data-f]').forEach(b=>{if(b.dataset.d===undefined)return;
     b.onclick=()=>{const p=b.dataset.p.replace(/&quot;/g,'"'),d=+b.dataset.d;
-      F.conteo[p]=F.conteo[p]||{n:null};let v=(F.conteo[p].n===null?0:F.conteo[p].n)+d;if(v<0)v=0;F.conteo[p].n=v;
-      // actualizar solo el input de este paradero + gauge, sin redibujar todo
+      F.conteo[p]=F.conteo[p]||{n:null};let v=(F.conteo[p].n===null?0:F.conteo[p].n)+d;if(v<0)v=0;
+      const tope=maxEnParadero(p); if(v>tope){v=tope; toast('Máximo alcanzado: 100% de capacidad','err');}
+      F.conteo[p].n=v;
       const inp=document.querySelector('[data-pn="'+b.dataset.p+'"]'); if(inp)inp.value=v;
       const cont=b.closest('.par'); if(cont)cont.classList.add('filled');
       refrescarGaugeRuta(); pintarAcciones();};});
   document.querySelectorAll('[data-pn]').forEach(inp=>{
     const p=inp.dataset.pn.replace(/&quot;/g,'"');
     inp.oninput=()=>{inp.value=inp.value.replace(/[^0-9]/g,'');F.conteo[p]=F.conteo[p]||{n:null};
-      F.conteo[p].n=inp.value===''?null:parseInt(inp.value,10);
+      let v=inp.value===''?null:parseInt(inp.value,10);
+      if(v!==null){ const tope=maxEnParadero(p); if(v>tope){v=tope;inp.value=v;toast('Máximo: 100% de capacidad','err');} }
+      F.conteo[p].n=v;
       refrescarGaugeRuta();pintarAcciones();};});
   // almuerzos por punto — actualiza in-situ, sin render (evita el salto de scroll)
   document.querySelectorAll('[data-pa]').forEach(b=>{
